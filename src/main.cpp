@@ -20,9 +20,10 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "Object3D.h"
 #include "Animator.h"
 #include "ShaderProgram.h"
-#include <SFML/Window/Event.hpp>
-#include <SFML/Window/Window.hpp>
-#include <SFML/Window/VideoMode.hpp>
+#include <SFML/Window.hpp>
+// #include <SFML/Window/Event.hpp>
+// #include <SFML/Window/Window.hpp>
+// #include <SFML/Window/VideoMode.hpp>
 
 struct DirLight {
     glm::vec3 direction;
@@ -34,11 +35,14 @@ struct Scene {
 	std::vector<Object3D> objects;
 	std::vector<Animator> animators;
     struct {
+        glm::vec3 front;
         glm::vec3 position;
+        glm::vec3 orientation;
+
         glm::mat4 view;
         glm::mat4 perspective;
     } camera;
-    glm::vec3 ambientColor{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 ambientColor{ 0.1f, 0.1f, 0.1f };
 };
 
 /**
@@ -165,7 +169,7 @@ Scene cube() {
 }
 
 Scene lightCube() {
-    Scene scene { phongLightingShader() };
+    Scene scene { toonLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
 
@@ -180,7 +184,7 @@ Scene lightCube() {
  */
 Scene lifeOfPi() {
 	// This scene is more complicated; it has child objects, as well as animators.
-	Scene scene{ phongLightingShader() };
+	Scene scene{ toonLightingShader() };
 
 	auto boat = assimpLoad("models/boat/boat.fbx", true);
 	boat.move(glm::vec3(0, -0.7, 0));
@@ -199,7 +203,7 @@ Scene lifeOfPi() {
 	Animator animBoat;
 	animBoat.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(0, 2 * M_PI, 0)));
 	Animator animTiger;
-	animTiger.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 0, 2 * M_PI)));
+	animTiger.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0)));
 
 	// The Animators will be destroyed when leaving this function, so we move them into
 	// a list to be returned.
@@ -248,13 +252,29 @@ int main() {
 		anim.start();
 	}
 
+    sf::Vector2<int> mousePosition = {};
+    bool firstMove = true;
+
 	while (running) {
         while (const std::optional ev = window.pollEvent()) {
 			if (ev->is<sf::Event::Closed>()) {
 				running = false;
 			}
-            if (ev->is<sf::Event::Resized>()) {
-                // TODO
+            else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
+                window.setSize(resized->size);
+            }
+            else if (const auto* keyPressed = ev->getIf<sf::Event::KeyPressed>()) {
+                switch (keyPressed->code) {
+                    case sf::Keyboard::Key::Escape: {
+                        running = false;
+                    } break;
+                    default: {
+
+                    } break;
+                }
+            }
+            else if (const auto* mouseMoved = ev->getIf<sf::Event::MouseMoved>()) {
+                mousePosition = mouseMoved->position;
             }
 		}
 		auto now = c.getElapsedTime();
@@ -286,7 +306,44 @@ int main() {
          *
          */
 		myScene.camera.position = glm::vec3(0, 0, 5);
-		myScene.camera.view = glm::lookAt(myScene.camera.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+        int lastX;
+        int lastY;
+        float& yaw = myScene.camera.orientation.x;
+        float& pitch = myScene.camera.orientation.y;
+
+        if (firstMove) {
+            lastX = mousePosition.x;
+            lastY = mousePosition.y;
+            yaw = -90.f;
+            firstMove = false;
+        }
+
+        float offsetX = mousePosition.x - lastX;
+        float offsetY = lastY - mousePosition.y;
+        lastX = mousePosition.x;
+        lastY = mousePosition.y;
+
+        float sensitivity = 0.1f;
+        offsetX *= sensitivity;
+        offsetY *= sensitivity;
+
+
+        yaw += offsetX; // yaw
+        pitch += offsetY; // pitch
+
+        if(pitch > 89.0f)
+            pitch = 89.0f;
+        if(pitch < -89.0f)
+            pitch = -89.0f;
+
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.y = sin(glm::radians(pitch));
+        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+        myScene.camera.front = glm::normalize(direction);
+
+		myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, glm::vec3(0, 1, 0));
 		myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 		myScene.program.setUniform("view", myScene.camera.view);

@@ -24,6 +24,7 @@ uniform vec3 directionalLight; // this is the "I" vector, not the "L" vector.
 uniform vec3 directionalColor;
 
 // Point Light
+uniform vec3 pointColor;
 uniform vec3 pointPosition;
 uniform vec3 pointAttenuation; // consists of constant, linear, and quadratic floats stored as a vector.
 
@@ -36,25 +37,30 @@ void main() {
     float dist = length(pointPosition - FragWorldPos);
     float attenuation = 1.0 / (pointAttenuation.x + pointAttenuation.y * dist + pointAttenuation.z * (dist * dist));
 
-    vec3 ambientIntensity = material.x * ambientColor * attenuation;
-    vec3 diffuseIntensity = vec3(0);
+    vec3 ambientIntensity = material.x * ambientColor;
+    vec3 diffuseIntensity = material.y * directionalColor;
     vec3 specularIntensity = vec3(0);
 
     vec3 norm = normalize(Normal);
     vec3 lightDir = -directionalLight;
     float lambertFactor = dot(norm, normalize(lightDir));
-    if (lambertFactor > 0.5) {
-        diffuseIntensity = material.y * directionalColor * attenuation;
-
-        vec3 eyeDir = normalize(viewPos - FragWorldPos);
-        vec3 reflectDir = normalize(reflect(-lightDir, norm));
-        float spec = dot(reflectDir, eyeDir);
-        if (spec > 0) {
-            specularIntensity = material.z * directionalColor * pow(spec, material.w);
-        }
+    if (lambertFactor > 0.95) {
+        diffuseIntensity *= vec3(1.0, 1.0, 1.0);
+        // vec3 eyeDir = normalize(viewPos - FragWorldPos);
+        // vec3 reflectDir = normalize(reflect(-lightDir, norm));
+        // float spec = dot(reflectDir, eyeDir);
+        // if (spec > 0) {
+        //     specularIntensity = material.z * directionalColor * pow(spec, material.w);
+        // }
+    }
+    else if (lambertFactor > 0.75) {
+        diffuseIntensity *= vec3(0.8, 0.8, 0.8);
+    }
+    else if (lambertFactor > 0.5) {
+        diffuseIntensity *= vec3(0.6, 0.6, 0.6);
     }
     else if (lambertFactor > 0.25) {
-        diffuseIntensity = material.y * directionalColor * attenuation;
+        diffuseIntensity *= vec3(0.4, 0.4, 0.4);
     }
 
     vec3 lightIntensity = ambientIntensity + diffuseIntensity + specularIntensity;
