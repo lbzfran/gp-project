@@ -32,7 +32,7 @@ private:
 public:
 	Mesh3D() = delete;
 
-	
+
 	/**
 	 * @brief Construcst a Mesh3D using existing vectors of vertices and faces.
 	*/
@@ -50,7 +50,7 @@ public:
 	 * @brief Constructs a 1x1 square centered at the origin in world space.
 	*/
 	static Mesh3D square(const std::vector<Texture>& textures);
-	
+
 	/**
 	 * @brief Renders the mesh to the given context.
 	 * @param model the local->world model transformation matrix.
@@ -58,5 +58,5 @@ public:
 	 * @param proj the view->clip projection matrix.
 	*/
 	void render(ShaderProgram& program) const;
-	
+
 };

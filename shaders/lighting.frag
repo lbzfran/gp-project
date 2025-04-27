@@ -30,11 +30,8 @@ uniform vec3 viewPos;
 
 
 void main() {
-    // TODO: using the lecture notes, compute ambientIntensity, diffuseIntensity,
-    // and specularIntensity.
 
     vec3 ambientIntensity = material.x * ambientColor;
-
     vec3 diffuseIntensity = vec3(0);
     vec3 specularIntensity = vec3(0);
 
@@ -51,7 +48,6 @@ void main() {
             specularIntensity = material.z * directionalColor * pow(spec, material.w);
         }
     }
-
 
     vec3 lightIntensity = ambientIntensity + diffuseIntensity + specularIntensity;
     FragColor = vec4(lightIntensity, 1) * texture(baseTexture, TexCoord);

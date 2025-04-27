@@ -28,6 +28,12 @@ struct Scene {
 	ShaderProgram program;
 	std::vector<Object3D> objects;
 	std::vector<Animator> animators;
+    struct {
+        glm::vec3 position;
+        glm::mat4 view;
+        glm::mat4 perspective;
+    } camera;
+    glm::vec3 ambientColor{ 0.2f, 0.2f, 0.2f };
 };
 
 /**
@@ -36,7 +42,6 @@ struct Scene {
 ShaderProgram phongLightingShader() {
 	ShaderProgram shader;
 	try {
-		// These shaders are INCOMPLETE.
 		shader.load("shaders/light_perspective.vert", "shaders/lighting.frag");
 	}
 	catch (std::runtime_error& e) {
@@ -123,7 +128,7 @@ Scene marbleSquare() {
  * @brief Loads a cube with a cube map texture.
  */
 Scene cube() {
-	Scene scene{ texturingShader() };
+	Scene scene{ phongLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
 
@@ -146,7 +151,7 @@ Scene cube() {
  */
 Scene lifeOfPi() {
 	// This scene is more complicated; it has child objects, as well as animators.
-	Scene scene{ texturingShader() };
+	Scene scene{ phongLightingShader() };
 
 	auto boat = assimpLoad("models/boat/boat.fbx", true);
 	boat.move(glm::vec3(0, -0.7, 0));
@@ -189,7 +194,7 @@ int main() {
 	settings.antiAliasingLevel = 2;  // Request 2 levels of antialiasing
 	settings.majorVersion = 3;
 	settings.minorVersion = 3;
-	sf::Window window(sf::VideoMode({1200,800}), "Modern OpenGL", sf::State::Windowed, settings);
+	sf::Window window(sf::VideoMode({1200,800}), "Modern OpenGL", sf::Style::Resize, sf::State::Windowed, settings);
 
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
@@ -219,6 +224,9 @@ int main() {
 			if (ev->is<sf::Event::Closed>()) {
 				running = false;
 			}
+            if (ev->is<sf::Event::Resized>()) {
+                // TODO
+            }
 		}
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
@@ -226,7 +234,6 @@ int main() {
 		last = now;
 
 
-		glm::vec3 cameraPos = glm::vec3(0, 0, 5);
         /*
          *  // logic for updating camera pos around a point
          *
@@ -249,12 +256,16 @@ int main() {
          *  }
          *
          */
-		glm::mat4 camera = glm::lookAt(cameraPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-		glm::mat4 perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
-		myScene.program.setUniform("view", camera);
-		myScene.program.setUniform("projection", perspective);
-		myScene.program.setUniform("cameraPos", cameraPos);
+		myScene.camera.position = glm::vec3(0, 0, 5);
+		myScene.camera.view = glm::lookAt(myScene.camera.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+		myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
+		myScene.program.setUniform("view", myScene.camera.view);
+		myScene.program.setUniform("projection", myScene.camera.perspective);
+		myScene.program.setUniform("viewPos", myScene.camera.position);
+
+        // lighting
+        myScene.program.setUniform("ambientColor", myScene.ambientColor);
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {

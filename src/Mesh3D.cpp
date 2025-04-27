@@ -53,6 +53,9 @@ void Mesh3D::addTexture(Texture texture) {
 }
 
 void Mesh3D::render(ShaderProgram& program) const {
+    glm::vec4 material = glm::vec4(1);
+    program.setUniform("material", material);
+
 	glBindVertexArray(m_vao);
 	for (auto i = 0; i < m_textures.size(); i++) {
 		program.setUniform(m_textures[i].samplerName, i);
