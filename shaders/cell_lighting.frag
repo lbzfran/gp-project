@@ -43,15 +43,18 @@ void main() {
     vec3 norm = normalize(Normal);
     vec3 lightDir = -directionalLight;
     float lambertFactor = dot(norm, normalize(lightDir));
-    if (lambertFactor > 0) {
-        diffuseIntensity = material.y * directionalColor * lambertFactor * attenuation;
+    if (lambertFactor > 0.5) {
+        diffuseIntensity = material.y * directionalColor * attenuation;
 
         vec3 eyeDir = normalize(viewPos - FragWorldPos);
         vec3 reflectDir = normalize(reflect(-lightDir, norm));
         float spec = dot(reflectDir, eyeDir);
         if (spec > 0) {
-            specularIntensity = material.z * directionalColor * pow(spec, material.w) * attenuation;
+            specularIntensity = material.z * directionalColor * pow(spec, material.w);
         }
+    }
+    else if (lambertFactor > 0.25) {
+        diffuseIntensity = material.y * directionalColor * attenuation;
     }
 
     vec3 lightIntensity = ambientIntensity + diffuseIntensity + specularIntensity;

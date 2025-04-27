@@ -24,6 +24,11 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window/Window.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
+struct DirLight {
+    glm::vec3 direction;
+    glm::vec3 color;
+};
+
 struct Scene {
 	ShaderProgram program;
 	std::vector<Object3D> objects;
@@ -35,6 +40,21 @@ struct Scene {
     } camera;
     glm::vec3 ambientColor{ 0.2f, 0.2f, 0.2f };
 };
+
+/**
+ * @brief Constructs a shader program that applies the Cell Shading model.
+ */
+ShaderProgram toonLightingShader() {
+	ShaderProgram shader;
+	try {
+		shader.load("shaders/light_perspective.vert", "shaders/cell_lighting.frag");
+	}
+	catch (std::runtime_error& e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+		exit(1);
+	}
+	return shader;
+}
 
 /**
  * @brief Constructs a shader program that applies the Phong reflection model.
@@ -128,19 +148,28 @@ Scene marbleSquare() {
  * @brief Loads a cube with a cube map texture.
  */
 Scene cube() {
-	Scene scene{ phongLightingShader() };
+	Scene scene{ toonLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
 
 	scene.objects.push_back(std::move(cube));
 
 	Animator spinCube;
-	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, 2 * M_PI, 0)));
+	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, M_PI, 0)));
 	// Then spin around the x axis.
-	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(2 * M_PI, 0, 0)));
+	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(M_PI, 0, 0)));
 
 	scene.animators.push_back(std::move(spinCube));
 
+	return scene;
+}
+
+Scene lightCube() {
+    Scene scene { phongLightingShader() };
+
+	auto cube = assimpLoad("models/cube.obj", true);
+
+	scene.objects.push_back(std::move(cube));
 	return scene;
 }
 
@@ -202,7 +231,7 @@ int main() {
 	// Inintialize scene objects.
 	auto myScene = lifeOfPi();
 	// You can directly access specific objects in the scene using references.
-	auto& firstObject = myScene.objects[0];
+	// auto& firstObject = myScene.objects[0];
 
 	// Activate the shader program.
 	myScene.program.activate();
@@ -266,6 +295,11 @@ int main() {
 
         // lighting
         myScene.program.setUniform("ambientColor", myScene.ambientColor);
+        myScene.program.setUniform("directionalLight", glm::vec3(1, -1, 0));
+        myScene.program.setUniform("directionalColor", glm::vec3(0.5, 0.5, 0));
+
+        myScene.program.setUniform("pointPosition", glm::vec3(1, 1, 1));
+        myScene.program.setUniform("pointAttenuation", glm::vec3(1.0, 0.14, 0.07));
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {

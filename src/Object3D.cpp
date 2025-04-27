@@ -120,6 +120,8 @@ void Object3D::renderRecursive(ShaderProgram& shaderProgram, const glm::mat4& pa
 	// This object's true model matrix is the combination of its parent's matrix and the object's matrix.
 	glm::mat4 trueModel = parentMatrix * buildModelMatrix();
 	shaderProgram.setUniform("model", trueModel);
+    shaderProgram.setUniform("material", m_material);
+
 	// Render each mesh in the object.
 	for (auto& mesh : m_meshes) {
 		mesh.render(shaderProgram);
