@@ -27,7 +27,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
 
-// #define SFML_V2
+#define SFML_V2
 
 struct DirLight {
     glm::vec3 direction;
@@ -86,6 +86,18 @@ ShaderProgram texturingShader() {
 	ShaderProgram shader;
 	try {
 		shader.load("shaders/texture_perspective.vert", "shaders/texturing.frag");
+	}
+	catch (std::runtime_error& e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+		exit(1);
+	}
+	return shader;
+}
+
+ShaderProgram simpleShader() {
+	ShaderProgram shader;
+	try {
+		shader.load("shaders/simple_perspective.vert", "shaders/uniform_color.frag");
 	}
 	catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -218,6 +230,25 @@ Scene lifeOfPi() {
 	return scene;
 }
 
+Scene Rinoa() {
+	Scene scene{ toonLightingShader() };
+
+	auto lady = assimpLoad("models/girl/scene.gltf", true);
+	lady.grow(glm::vec3(3, 3, 3));
+	lady.move(glm::vec3(0.2, -1, -10));
+
+	/*auto cube = assimpLoad("models/cube.obj", true);*/
+	/*cube.move(glm::vec3(0.2, -1, -10));*/
+
+	scene.objects.push_back(std::move(lady));
+
+	Animator animLady;
+	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0)));
+
+	scene.animators.push_back(std::move(animLady));
+
+    return scene;
+}
 
 
 int main() {
@@ -241,7 +272,7 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 
 	// Inintialize scene objects.
-	auto myScene = cube();
+	auto myScene = Rinoa();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 
@@ -266,7 +297,6 @@ int main() {
     // center the mouse initially.
     sf::Vector2<int> mousePosition = {};
     sf::Mouse::setPosition({(int)window.getSize().x / 2, (int)window.getSize().y / 2 }, window);
-    /*sf::Mouse::setPosition(mousePosition, window);*/
     bool firstMove = true;
 
 	while (running) {
@@ -361,7 +391,7 @@ int main() {
         lastX = mousePosition.x;
         lastY = mousePosition.y;
 
-        float sensitivity = 0.1f;
+        float sensitivity = 0.3f;
         offsetX *= sensitivity;
         offsetY *= sensitivity;
 
@@ -393,7 +423,7 @@ int main() {
         myScene.program.setUniform("directionalLight", glm::vec3(1, -1, 0));
         myScene.program.setUniform("directionalColor", glm::vec3(0.5, 0.5, 0));
 
-        myScene.program.setUniform("pointPosition", glm::vec3(1, 1, 1));
+        myScene.program.setUniform("pointPosition", glm::vec3(1, 1, -3));
         myScene.program.setUniform("pointAttenuation", glm::vec3(1.0, 0.14, 0.07));
 
 		// Update the scene.
