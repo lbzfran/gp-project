@@ -21,9 +21,12 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "Animator.h"
 #include "ShaderProgram.h"
 #include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
 // #include <SFML/Window/Event.hpp>
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
+
+#define SFML_V2
 
 struct DirLight {
     glm::vec3 direction;
@@ -36,7 +39,7 @@ struct Scene {
 	std::vector<Animator> animators;
     struct {
         glm::vec3 front;
-        glm::vec3 position;
+        glm::vec3 position{ 0.0f, 0.0f, 5.0f };
         glm::vec3 orientation;
 
         glm::mat4 view;
@@ -224,12 +227,15 @@ int main() {
 	sf::ContextSettings settings;
 	settings.depthBits = 24; // Request a 24 bits depth buffer
 	settings.stencilBits = 8;  // Request a 8 bits stencil buffer
-	settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
 	settings.majorVersion = 3;
 	settings.minorVersion = 3;
-	/*sf::Window window(sf::VideoMode({1200,800}), "Modern OpenGL", sf::State::Windowed, settings);*/
-    sf::Window window(sf::VideoMode{ 1200, 800 }, "Modern OpenGL", sf::Style::Resize | sf::Style::Close, settings);
-
+#ifdef SFML_V2
+	settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
+    sf::Window window(sf::VideoMode{ 1200, 800 }, "Modern OpenGL v2", sf::Style::Resize | sf::Style::Close, settings);
+#else
+	settings.antiAliasingLevel = 2;
+	sf::Window window(sf::VideoMode({ 1200,800 }), "Modern OpenGL v3", sf::State::Windowed, settings);
+#endif
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
 
@@ -253,7 +259,10 @@ int main() {
 		anim.start();
 	}
 
+    // center the mouse initially.
     sf::Vector2<int> mousePosition = {};
+    sf::Mouse::setPosition({(int)window.getSize().x / 2, (int)window.getSize().y / 2 }, window);
+    /*sf::Mouse::setPosition(mousePosition, window);*/
     bool firstMove = true;
 
 	while (running) {
@@ -264,10 +273,10 @@ int main() {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
-                window.setSize(ev.size);
+                window.setSize({ ev.size.width, ev.size.height });
             }
             else if (ev.type == sf::Event::KeyPressed) {
-                switch (ev.key) {
+                switch (ev.key.code) {
                     case sf::Keyboard::Key::Escape: {
                         running = false;
                     } break;
@@ -277,7 +286,8 @@ int main() {
                 }
             }
             else if (ev.type == sf::Event::MouseMoved) {
-                mousePosition = ev.mouseMove;
+                mousePosition.x = ev.mouseMove.x;
+                mousePosition.y = ev.mouseMove.y;
             }
         }
 #else
@@ -307,8 +317,6 @@ int main() {
 		auto diff = now - last;
 		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
-
-
         /*
          *  // logic for updating camera pos around a point
          *
@@ -331,7 +339,6 @@ int main() {
          *  }
          *
          */
-		myScene.camera.position = glm::vec3(0, 0, 5);
         int lastX;
         int lastY;
         float& yaw = myScene.camera.orientation.x;
