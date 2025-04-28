@@ -152,7 +152,7 @@ Scene marbleSquare() {
  * @brief Loads a cube with a cube map texture.
  */
 Scene cube() {
-	Scene scene{ toonLightingShader() };
+	Scene scene{ phongLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
 
@@ -224,16 +224,17 @@ int main() {
 	sf::ContextSettings settings;
 	settings.depthBits = 24; // Request a 24 bits depth buffer
 	settings.stencilBits = 8;  // Request a 8 bits stencil buffer
-	settings.antiAliasingLevel = 2;  // Request 2 levels of antialiasing
+	settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
 	settings.majorVersion = 3;
 	settings.minorVersion = 3;
-	sf::Window window(sf::VideoMode({1200,800}), "Modern OpenGL", sf::Style::Resize, sf::State::Windowed, settings);
+	/*sf::Window window(sf::VideoMode({1200,800}), "Modern OpenGL", sf::State::Windowed, settings);*/
+    sf::Window window(sf::VideoMode{ 1200, 800 }, "Modern OpenGL", sf::Style::Resize | sf::Style::Close, settings);
 
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
 
 	// Inintialize scene objects.
-	auto myScene = lifeOfPi();
+	auto myScene = cube();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 
@@ -256,10 +257,34 @@ int main() {
     bool firstMove = true;
 
 	while (running) {
-        while (const std::optional ev = window.pollEvent()) {
-			if (ev->is<sf::Event::Closed>()) {
+#ifdef SFML_V2
+        sf::Event ev;
+        while (window.pollEvent(ev)) {
+			if (ev.type == sf::Event::Closed) {
 				running = false;
 			}
+            else if (ev.type == sf::Event::Resized) {
+                window.setSize(ev.size);
+            }
+            else if (ev.type == sf::Event::KeyPressed) {
+                switch (ev.key) {
+                    case sf::Keyboard::Key::Escape: {
+                        running = false;
+                    } break;
+                    default: {
+
+                    } break;
+                }
+            }
+            else if (ev.type == sf::Event::MouseMoved) {
+                mousePosition = ev.mouseMove;
+            }
+        }
+#else
+        while (window.pollEvent()) {
+            if (ev->getIf<sf::Event::Closed>()) {
+                running = false;
+            }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
                 window.setSize(resized->size);
             }
@@ -277,6 +302,7 @@ int main() {
                 mousePosition = mouseMoved->position;
             }
 		}
+#endif
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
 		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
@@ -372,5 +398,6 @@ int main() {
 		window.display();
 
 	}
+    window.close();
 	return 0;
 }
