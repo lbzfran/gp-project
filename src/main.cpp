@@ -13,6 +13,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <iostream>
 #include <memory>
 #include <filesystem>
+#include <optional>
 #include <math.h>
 
 #include "AssimpImport.h"
@@ -26,7 +27,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
 
-#define SFML_V2
+// #define SFML_V2
 
 struct DirLight {
     glm::vec3 direction;
@@ -254,6 +255,9 @@ int main() {
 	sf::Clock c;
 	auto last = c.getElapsedTime();
 
+    float& yaw = myScene.camera.orientation.x;
+    float& pitch = myScene.camera.orientation.y;
+
 	// Start the animators.
 	for (auto& anim : myScene.animators) {
 		anim.start();
@@ -273,7 +277,8 @@ int main() {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
-                window.setSize({ ev.size.width, ev.size.height });
+                // window.setSize({ ev.size.width, ev.size.height });
+                glViewport(0, 0, ev.size.width, ev.size.height);
             }
             else if (ev.type == sf::Event::KeyPressed) {
                 switch (ev.key.code) {
@@ -291,12 +296,14 @@ int main() {
             }
         }
 #else
-        while (window.pollEvent()) {
+        while (const std::optional ev = window.pollEvent()) {
             if (ev->getIf<sf::Event::Closed>()) {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
-                window.setSize(resized->size);
+                // window.setSize(resized->size);
+                glViewport(0, 0, resized->size.x, resized->size.y);
+
             }
             else if (const auto* keyPressed = ev->getIf<sf::Event::KeyPressed>()) {
                 switch (keyPressed->code) {
@@ -341,8 +348,6 @@ int main() {
          */
         int lastX;
         int lastY;
-        float& yaw = myScene.camera.orientation.x;
-        float& pitch = myScene.camera.orientation.y;
 
         if (firstMove) {
             lastX = mousePosition.x;
