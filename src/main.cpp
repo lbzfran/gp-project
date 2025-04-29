@@ -46,7 +46,7 @@ struct PointLight {
 
     glm::vec3 ambient;
     glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular;
+    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
 struct SpotLight {
@@ -59,7 +59,7 @@ struct SpotLight {
     float quadratic = 0.07f;
 
     glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 0.5f, 0.0f, 0.5f };
+    glm::vec3 diffuse{ 1.f, 0.0f, 1.f };
     glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
 };
 
@@ -473,7 +473,7 @@ int main() {
         /*myScene.program.setUniform("spotLight.cutOff", myScene.slight.cutOff);*/
         myScene.program.setUniform("spotLight.direction", myScene.camera.front);
         myScene.program.setUniform("spotLight.position", myScene.camera.position);
-        myScene.program.setUniform("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        myScene.program.setUniform("spotLight.cutOff", glm::cos(glm::radians(25.f)));
 
         myScene.program.setUniform("spotLight.constant", myScene.slight.constant);
         myScene.program.setUniform("spotLight.linear", myScene.slight.linear);
