@@ -16,53 +16,124 @@ uniform sampler2D baseTexture;
 // Material parameters for the whole mesh: k_a, k_d, k_s, shininess.
 uniform vec4 material;
 
-// Ambient light color.
-uniform vec3 ambientColor;
-
-// Direction and color of a single directional light.
-uniform vec3 directionalLight; // this is the "I" vector, not the "L" vector.
-uniform vec3 directionalColor;
-
-// Point Light
-uniform vec3 pointColor;
-uniform vec3 pointPosition;
-uniform vec3 pointAttenuation; // consists of constant, linear, and quadratic floats stored as a vector.
-
-
 // Location of the camera.
 uniform vec3 viewPos;
 
+// Ambient light color.
+uniform vec3 ambientColor;
+
+struct DirLight {
+    vec3 direction;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+uniform DirLight dirLight;
+
+// Point Light
+struct PointLight {
+    vec3 position;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+uniform PointLight pointLight;
+
+struct SpotLight {
+    vec3 direction;
+    vec3 position;
+    float cutOff;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+uniform SpotLight spotLight;
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 eyeDir) {
+    vec3 lightDir = normalize(-light.direction);
+
+    float lambertFactor = max(dot(normal, lightDir), 0.0);
+
+    vec3 reflectDir = normalize(reflect(-lightDir, normal));
+    float spec = pow(max(dot(reflectDir, eyeDir), 0.0), material.w);
+
+    vec3 ambient = material.x * light.ambient;
+    vec3 diffuse = material.y * light.diffuse * lambertFactor;
+    vec3 specular = material.z * light.specular * spec;
+
+    return (ambient + diffuse + specular);
+}
+
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 eyeDir) {
+    vec3 lightDir = normalize(light.position - fragPos);
+    float lambertFactor = max(dot(normal, lightDir), 0.0);
+
+    float distance = length(light.position - fragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+
+    vec3 reflectDir = normalize(reflect(-lightDir, normal));
+    float spec = pow(max(dot(reflectDir, eyeDir), 0.0), material.w);
+
+    vec3 ambient = material.x * light.ambient;
+    vec3 diffuse = material.y * light.diffuse * lambertFactor;
+    vec3 specular = material.z * light.specular * spec;
+
+    ambient *= attenuation;
+    diffuse *= attenuation;
+    specular *= attenuation;
+
+    return (ambient + diffuse + specular);
+}
+
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 eyeDir) {
+    vec3 lightDir = normalize(light.position - fragPos);
+    float lambertFactor = max(dot(normal, lightDir), 0.0);
+
+    float distance = length(light.position - fragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+
+
+    vec3 reflectDir = normalize(reflect(-lightDir, normal));
+    float spec = pow(max(dot(reflectDir, eyeDir), 0.0), material.w);
+
+    float theta = dot(lightDir, normalize(-light.direction));
+
+    vec3 ambient = vec3(0);
+    vec3 diffuse = vec3(0);
+    vec3 specular = vec3(0);
+
+    if (theta > light.cutOff) {
+        vec3 ambient = material.x * light.ambient;
+        vec3 diffuse = material.y * light.diffuse * lambertFactor;
+        vec3 specular = material.z * light.specular * spec;
+
+        ambient *= attenuation;
+        diffuse *= attenuation;
+        specular *= attenuation;
+    }
+
+    return (ambient + diffuse + specular);
+}
+
 void main() {
 
-    float dist = length(pointPosition - FragWorldPos);
-    float attenuation = 1.0 / (pointAttenuation.x + pointAttenuation.y * dist + pointAttenuation.z * (dist * dist));
-
-    vec3 ambientIntensity = material.x * ambientColor;
-    vec3 diffuseIntensity = material.y * directionalColor;
-    vec3 specularIntensity = vec3(0);
-
     vec3 norm = normalize(Normal);
-    vec3 lightDir = -directionalLight;
-    float lambertFactor = dot(norm, normalize(lightDir));
-    if (lambertFactor > 0.95) {
-        diffuseIntensity *= vec3(1.0, 1.0, 1.0);
-        // vec3 eyeDir = normalize(viewPos - FragWorldPos);
-        // vec3 reflectDir = normalize(reflect(-lightDir, norm));
-        // float spec = dot(reflectDir, eyeDir);
-        // if (spec > 0) {
-        //     specularIntensity = material.z * directionalColor * pow(spec, material.w);
-        // }
-    }
-    else if (lambertFactor > 0.75) {
-        diffuseIntensity *= vec3(0.8, 0.8, 0.8);
-    }
-    else if (lambertFactor > 0.5) {
-        diffuseIntensity *= vec3(0.6, 0.6, 0.6);
-    }
-    else if (lambertFactor > 0.25) {
-        diffuseIntensity *= vec3(0.4, 0.4, 0.4);
-    }
+    vec3 eyeDir = normalize(viewPos - FragWorldPos);
 
-    vec3 lightIntensity = ambientIntensity + diffuseIntensity + specularIntensity;
-    FragColor = vec4(lightIntensity, 1) * texture(baseTexture, TexCoord);
+    vec3 result = CalcDirLight(dirLight, norm, eyeDir);
+    result += CalcPointLight(pointLight, norm, FragWorldPos, eyeDir);
+    result += CalcSpotLight(spotLight, norm, FragWorldPos, eyeDir);
+
+    FragColor = vec4(result, 1.0) * texture(baseTexture, TexCoord);
 }

@@ -28,28 +28,39 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/VideoMode.hpp>
 
 #define SFML_V2
-#define MAX_POINT_LIGHTS 4
 
-struct DirectionLight {
-    glm::vec3 direction;
-    /*glm::vec3 color;*/
+struct DirLight {
+    glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
 
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
+    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
     glm::vec3 specular;
 };
 
 struct PointLight {
     glm::vec3 position;
-    glm::vec3 color;
+
+    float constant = 1.0f;
+    float linear = 0.14f;
+    float quadratic = 0.07f;
 
     glm::vec3 ambient;
-    glm::vec3 diffuse;
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
     glm::vec3 specular;
+};
 
-    float constant;
-    float linear;
-    float quadratic;
+struct SpotLight {
+    glm::vec3 position;
+    glm::vec3 direction;
+    float cutOff;
+
+    float constant = 1.0f;
+    float linear = 0.14f;
+    float quadratic = 0.07f;
+
+    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.5f, 0.0f, 0.5f };
+    glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
 };
 
 struct Scene {
@@ -64,10 +75,10 @@ struct Scene {
         glm::mat4 view;
         glm::mat4 perspective;
     } camera;
-    glm::vec3 ambientColor{ 0.2f, 0.2f, 0.2f };
 
-    DirectionLight dirLight;
-    std::vector<PointLight> pointLights;
+    DirLight dlight;
+    PointLight plight;
+    SpotLight slight;
 };
 
 /**
@@ -254,6 +265,8 @@ Scene lifeOfPi() {
 Scene Rinoa() {
 	Scene scene{ toonLightingShader() };
 
+    scene.plight.position = {2.f, 2.f, -3.f};
+
 	auto lady = assimpLoad("models/stickman/Simple_Character.fbx", true);
 	lady.grow(glm::vec3(0.25));
 	lady.move(glm::vec3(0, -25, -50));
@@ -264,7 +277,7 @@ Scene Rinoa() {
 	scene.objects.push_back(std::move(lady));
 
 	Animator animLady;
-	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1).getChild(1), 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));
+	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));
 
 	scene.animators.push_back(std::move(animLady));
 
@@ -440,12 +453,35 @@ int main() {
 		myScene.program.setUniform("viewPos", myScene.camera.position);
 
         // lighting
-        myScene.program.setUniform("ambientColor", myScene.ambientColor);
-        myScene.program.setUniform("directionalLight", glm::vec3(1, -1, 0));
-        myScene.program.setUniform("directionalColor", glm::vec3(0.5, 0, 0.5));
+        myScene.program.setUniform("dirLight.direction", myScene.dlight.direction);
+        myScene.program.setUniform("dirLight.ambient", myScene.dlight.ambient);
+        myScene.program.setUniform("dirLight.diffuse", myScene.dlight.diffuse);
+        myScene.program.setUniform("dirLight.specular", myScene.dlight.specular);
 
-        myScene.program.setUniform("pointPosition", glm::vec3(2, 2, 3));
-        myScene.program.setUniform("pointAttenuation", glm::vec3(1.0, 0.14, 0.07));
+        myScene.program.setUniform("pointLight.position", myScene.plight.position);
+
+        myScene.program.setUniform("pointLight.constant", myScene.plight.constant);
+        myScene.program.setUniform("pointLight.linear", myScene.plight.linear);
+        myScene.program.setUniform("pointLight.quadratic", myScene.plight.quadratic);
+
+        myScene.program.setUniform("pointLight.ambient", myScene.plight.ambient);
+        myScene.program.setUniform("pointLight.diffuse", myScene.plight.diffuse);
+        myScene.program.setUniform("pointLight.specular", myScene.plight.specular);
+
+        /*myScene.program.setUniform("spotLight.direction", myScene.slight.direction);*/
+        /*myScene.program.setUniform("spotLight.position", myScene.slight.position);*/
+        /*myScene.program.setUniform("spotLight.cutOff", myScene.slight.cutOff);*/
+        myScene.program.setUniform("spotLight.direction", myScene.camera.front);
+        myScene.program.setUniform("spotLight.position", myScene.camera.position);
+        myScene.program.setUniform("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+
+        myScene.program.setUniform("spotLight.constant", myScene.slight.constant);
+        myScene.program.setUniform("spotLight.linear", myScene.slight.linear);
+        myScene.program.setUniform("spotLight.quadratic", myScene.slight.quadratic);
+
+        myScene.program.setUniform("spotLight.ambient", myScene.slight.ambient);
+        myScene.program.setUniform("spotLight.diffuse", myScene.slight.diffuse);
+        myScene.program.setUniform("spotLight.specular", myScene.slight.specular);
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {
