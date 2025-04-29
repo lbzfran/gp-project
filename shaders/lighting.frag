@@ -36,7 +36,7 @@ void main() {
     float dist = length(pointPosition - FragWorldPos);
     float attenuation = 1.0 / (pointAttenuation.x + pointAttenuation.y * dist + pointAttenuation.z * (dist * dist));
 
-    vec3 ambientIntensity = material.x * ambientColor * attenuation;
+    vec3 ambientIntensity = material.x * ambientColor;
     vec3 diffuseIntensity = vec3(0);
     vec3 specularIntensity = vec3(0);
 

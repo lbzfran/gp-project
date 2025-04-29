@@ -28,16 +28,34 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/VideoMode.hpp>
 
 #define SFML_V2
+#define MAX_POINT_LIGHTS 4
 
-struct DirLight {
+struct DirectionLight {
     glm::vec3 direction;
+    /*glm::vec3 color;*/
+
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
+struct PointLight {
+    glm::vec3 position;
     glm::vec3 color;
+
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
 };
 
 struct Scene {
-	ShaderProgram program;
-	std::vector<Object3D> objects;
-	std::vector<Animator> animators;
+    ShaderProgram program;
+    std::vector<Object3D> objects;
+    std::vector<Animator> animators;
     struct {
         glm::vec3 front;
         glm::vec3 position{ 0.0f, 0.0f, 5.0f };
@@ -46,7 +64,10 @@ struct Scene {
         glm::mat4 view;
         glm::mat4 perspective;
     } camera;
-    glm::vec3 ambientColor{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 ambientColor{ 0.2f, 0.2f, 0.2f };
+
+    DirectionLight dirLight;
+    std::vector<PointLight> pointLights;
 };
 
 /**
@@ -233,9 +254,9 @@ Scene lifeOfPi() {
 Scene Rinoa() {
 	Scene scene{ toonLightingShader() };
 
-	auto lady = assimpLoad("models/girl/scene.gltf", true);
-	lady.grow(glm::vec3(3, 3, 3));
-	lady.move(glm::vec3(0.2, -1, -10));
+	auto lady = assimpLoad("models/stickman/Simple_Character.fbx", true);
+	lady.grow(glm::vec3(0.25));
+	lady.move(glm::vec3(0, -25, -50));
 
 	/*auto cube = assimpLoad("models/cube.obj", true);*/
 	/*cube.move(glm::vec3(0.2, -1, -10));*/
@@ -243,7 +264,7 @@ Scene Rinoa() {
 	scene.objects.push_back(std::move(lady));
 
 	Animator animLady;
-	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0)));
+	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1).getChild(1), 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));
 
 	scene.animators.push_back(std::move(animLady));
 
@@ -421,9 +442,9 @@ int main() {
         // lighting
         myScene.program.setUniform("ambientColor", myScene.ambientColor);
         myScene.program.setUniform("directionalLight", glm::vec3(1, -1, 0));
-        myScene.program.setUniform("directionalColor", glm::vec3(0.5, 0.5, 0));
+        myScene.program.setUniform("directionalColor", glm::vec3(0.5, 0, 0.5));
 
-        myScene.program.setUniform("pointPosition", glm::vec3(1, 1, -3));
+        myScene.program.setUniform("pointPosition", glm::vec3(2, 2, 3));
         myScene.program.setUniform("pointAttenuation", glm::vec3(1.0, 0.14, 0.07));
 
 		// Update the scene.
