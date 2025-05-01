@@ -32,8 +32,8 @@ We now transform local space vertices to clip space using uniform matrices in th
 struct DirLight {
     glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
 
-    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
     glm::vec3 specular;
 };
 
@@ -45,8 +45,8 @@ struct PointLight {
     float quadratic = 0.07f;
 
     glm::vec3 ambient;
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
 struct SpotLight {
@@ -58,9 +58,9 @@ struct SpotLight {
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 1.f, 0.0f, 1.f };
-    glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 ambient{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 diffuse{ 0.f, 0.0f, 0.f };
+    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
 struct Camera {
@@ -293,12 +293,12 @@ void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition) {
     static int lastX;
     static int lastY;
     static bool firstMove = true;
+    static float sensitivity = 0.3f;
 
     glm::vec3 direction;
 
     float offsetX = mousePosition.x - lastX;
     float offsetY = lastY - mousePosition.y;
-    float sensitivity = 0.3f;
 
     float& yaw = camera.orientation.x;
     float& pitch = camera.orientation.y;
@@ -348,7 +348,7 @@ int main() {
     sf::Window window(sf::VideoMode{ 1200, 800 }, "Modern OpenGL v2", sf::Style::Resize | sf::Style::Close, settings);
 #else
 	settings.antiAliasingLevel = 2;
-	sf::Window window(sf::VideoMode({ 1200,800 }), "Modern OpenGL v3", sf::State::Windowed, settings);
+	sf::Window window(sf::VideoMode({ 1200, 800 }), "Modern OpenGL v3", sf::State::Windowed, settings);
 #endif
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
@@ -378,16 +378,24 @@ int main() {
 		anim.start();
 	}
 
+    //
+    int moveDirX = 0;
+    int moveDirY = 0;
+    bool isMoving = false;
+
     // center the mouse initially.
     sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
     sf::Mouse::setPosition(mousePosition, window);
-    // window.setMouseCursorVisible(false);
+    window.setMouseCursorVisible(false);
     window.setMouseCursorGrabbed(true);
+    // window.setKeyRepeatEnabled(true);
 
     UpdateCamera(myScene.camera, mousePosition);
     myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 	while (running) {
+        dt = deltaClock.restart().asSeconds();
+        isMoving = false;
 #ifdef SFML_V2
         sf::Event ev;
         while (window.pollEvent(ev)) {
@@ -426,32 +434,56 @@ int main() {
             else if (const auto* mouseMoved = ev->getIf<sf::Event::MouseMoved>()) {
                 mousePosition = mouseMoved->position;
                 UpdateCamera(myScene.camera, mousePosition);
+
+                // window.setMouseCursorGrabbed(false);
+                // sf::Mouse::setPosition({window.getSize().x / 2, window.getSize().y / 2});
+                // window.setMouseCursorGrabbed(true);
             }
 
             if (ev->is<sf::Event::KeyPressed>()) {
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
-                    myScene.camera.position += myScene.camera.speed * myScene.camera.front;
+                    isMoving = true;
+                    moveDirX = 1;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
-                    myScene.camera.position -= myScene.camera.speed * myScene.camera.front;
+                    isMoving = true;
+                    moveDirX = -1;
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-                    myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+                    isMoving = true;
+                    moveDirY = -1;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-                    myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+                    isMoving = true;
+                    moveDirY = 1;
                 }
-                UpdateCamera(myScene.camera, mousePosition);
             }
 		}
 #endif
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
-		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
+		// std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
-        dt = deltaClock.restart().asSeconds();
+        if (isMoving) {
+            if (moveDirX == 1) {
+                myScene.camera.position += myScene.camera.speed * myScene.camera.front;
+            }
+            else if (moveDirX == -1) {
+                myScene.camera.position -= myScene.camera.speed * myScene.camera.front;
+            }
+
+            if (moveDirY == -1) {
+                myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+            }
+            else if (moveDirY == 1) {
+                myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+            }
+            UpdateCamera(myScene.camera, mousePosition);
+
+        }
+
         /*
          *  // logic for updating camera pos around a point
          *
@@ -509,7 +541,7 @@ int main() {
         //
         // myScene.camera.front = glm::normalize(direction);
 
-        myScene.camera.speed = 2.5f * dt;
+        myScene.camera.speed = 2.5f;
 
 		// myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, myScene.camera.up);
 		// myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);

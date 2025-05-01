@@ -132,8 +132,8 @@ void main() {
     vec3 eyeDir = normalize(viewPos - FragWorldPos);
 
     vec3 result = CalcDirLight(dirLight, norm, eyeDir);
-    result += CalcPointLight(pointLight, norm, FragWorldPos, eyeDir);
-    result += CalcSpotLight(spotLight, norm, FragWorldPos, eyeDir);
+    // result += CalcPointLight(pointLight, norm, FragWorldPos, eyeDir);
+    // result += CalcSpotLight(spotLight, norm, FragWorldPos, eyeDir);
 
     FragColor = vec4(result, 1.0) * texture(baseTexture, TexCoord);
 }
