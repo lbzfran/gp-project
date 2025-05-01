@@ -25,9 +25,9 @@ struct Vertex3D {
 class Mesh3D {
 private:
 	uint32_t m_vao;
-	std::vector<Texture> m_textures;
 	uint32_t m_vertexCount;
 	uint32_t m_faceCount;
+	std::vector<Texture> m_textures;
 
 public:
 	Mesh3D() = delete;

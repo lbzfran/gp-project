@@ -121,7 +121,7 @@ Object3D processAssimpNode(aiNode* node, const aiScene* scene,
 
 	// Load the aiNode's meshes.
 	std::vector<Mesh3D> meshes;
-	for (auto i = 0; i < node->mNumMeshes; i++) {
+	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 		meshes.emplace_back(fromAssimpMesh(mesh, scene, modelPath, loadedTextures));
 	}
@@ -131,14 +131,14 @@ Object3D processAssimpNode(aiNode* node, const aiScene* scene,
 		textures.push_back(p.second);
 	}
 	glm::mat4 baseTransform;
-	for (auto i = 0; i < 4; i++) {
-		for (auto j = 0; j < 4; j++) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
 			baseTransform[i][j] = node->mTransformation[j][i];
 		}
 	}
 	auto parent = Object3D(std::move(meshes), baseTransform);
 
-	for (auto i = 0; i < node->mNumChildren; i++) {
+	for (unsigned int i = 0; i < node->mNumChildren; i++) {
 		Object3D child = processAssimpNode(node->mChildren[i], scene, modelPath, loadedTextures);
 		parent.addChild(std::move(child));
 	}

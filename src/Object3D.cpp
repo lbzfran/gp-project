@@ -20,7 +20,7 @@ Object3D::Object3D(std::vector<Mesh3D>&& meshes)
 
 Object3D::Object3D(std::vector<Mesh3D>&& meshes, const glm::mat4& baseTransform)
 	: m_meshes(meshes), m_position(), m_orientation(), m_scale(1.0),
-	m_center(), m_baseTransform(baseTransform), m_material(0.1, 1.0, 0.3, 4)
+	m_center(), m_material(0.1, 1.0, 0.3, 4), m_baseTransform(baseTransform)
 {
 }
 

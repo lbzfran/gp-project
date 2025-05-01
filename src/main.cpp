@@ -27,7 +27,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
 
-#define SFML_V2
+// #define SFML_V2
 
 struct DirLight {
     glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
@@ -63,18 +63,23 @@ struct SpotLight {
     glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
 };
 
+struct Camera {
+    glm::vec3 front;
+    glm::vec3 position{ 0.0f, 0.0f, 5.0f };
+    glm::vec3 orientation;
+    glm::vec3 up{ 0.0f, 1.0f, 0.0f };
+    float speed = 0.05f;
+
+    glm::mat4 view;
+    glm::mat4 perspective;
+};
+
 struct Scene {
     ShaderProgram program;
     std::vector<Object3D> objects;
     std::vector<Animator> animators;
-    struct {
-        glm::vec3 front;
-        glm::vec3 position{ 0.0f, 0.0f, 5.0f };
-        glm::vec3 orientation;
 
-        glm::mat4 view;
-        glm::mat4 perspective;
-    } camera;
+    Camera camera;
 
     DirLight dlight;
     PointLight plight;
@@ -284,6 +289,49 @@ Scene Rinoa() {
     return scene;
 }
 
+void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition) {
+    static int lastX;
+    static int lastY;
+    static bool firstMove = true;
+
+    glm::vec3 direction;
+
+    float offsetX = mousePosition.x - lastX;
+    float offsetY = lastY - mousePosition.y;
+    float sensitivity = 0.3f;
+
+    float& yaw = camera.orientation.x;
+    float& pitch = camera.orientation.y;
+
+    if (firstMove) {
+        lastX = mousePosition.x;
+        lastY = mousePosition.y;
+        yaw = -90.f;
+        firstMove = false;
+    }
+
+    lastX = mousePosition.x;
+    lastY = mousePosition.y;
+
+    offsetX *= sensitivity;
+    offsetY *= sensitivity;
+
+    yaw += offsetX; // yaw
+    pitch += offsetY; // pitch
+
+    if(pitch > 89.0f)
+        pitch = 89.0f;
+    if(pitch < -89.0f)
+        pitch = -89.0f;
+
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+    camera.front = glm::normalize(direction);
+    camera.view = glm::lookAt(camera.position, camera.position + camera.front, camera.up);
+}
+
 
 int main() {
 
@@ -318,10 +366,12 @@ int main() {
 	// Ready, set, go!
 	bool running = true;
 	sf::Clock c;
+    sf::Clock deltaClock;
 	auto last = c.getElapsedTime();
 
-    float& yaw = myScene.camera.orientation.x;
-    float& pitch = myScene.camera.orientation.y;
+    float dt = 0.f;
+
+    // myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, myScene.camera.up);
 
 	// Start the animators.
 	for (auto& anim : myScene.animators) {
@@ -329,9 +379,13 @@ int main() {
 	}
 
     // center the mouse initially.
-    sf::Vector2<int> mousePosition = {};
-    sf::Mouse::setPosition({(int)window.getSize().x / 2, (int)window.getSize().y / 2 }, window);
-    bool firstMove = true;
+    sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
+    sf::Mouse::setPosition(mousePosition, window);
+    // window.setMouseCursorVisible(false);
+    window.setMouseCursorGrabbed(true);
+
+    UpdateCamera(myScene.camera, mousePosition);
+    myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 	while (running) {
 #ifdef SFML_V2
@@ -341,7 +395,7 @@ int main() {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
-                // window.setSize({ ev.size.width, ev.size.height });
+                window.setSize({ ev.size.width, ev.size.height });
                 glViewport(0, 0, ev.size.width, ev.size.height);
             }
             else if (ev.type == sf::Event::KeyPressed) {
@@ -361,26 +415,34 @@ int main() {
         }
 #else
         while (const std::optional ev = window.pollEvent()) {
-            if (ev->getIf<sf::Event::Closed>()) {
+            if (ev->getIf<sf::Event::Closed>() || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
-                // window.setSize(resized->size);
+                window.setSize(resized->size);
                 glViewport(0, 0, resized->size.x, resized->size.y);
-
-            }
-            else if (const auto* keyPressed = ev->getIf<sf::Event::KeyPressed>()) {
-                switch (keyPressed->code) {
-                    case sf::Keyboard::Key::Escape: {
-                        running = false;
-                    } break;
-                    default: {
-
-                    } break;
-                }
+                myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
             }
             else if (const auto* mouseMoved = ev->getIf<sf::Event::MouseMoved>()) {
                 mousePosition = mouseMoved->position;
+                UpdateCamera(myScene.camera, mousePosition);
+            }
+
+            if (ev->is<sf::Event::KeyPressed>()) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
+                    myScene.camera.position += myScene.camera.speed * myScene.camera.front;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
+                    myScene.camera.position -= myScene.camera.speed * myScene.camera.front;
+                }
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
+                    myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
+                    myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+                }
+                UpdateCamera(myScene.camera, mousePosition);
             }
 		}
 #endif
@@ -388,6 +450,8 @@ int main() {
 		auto diff = now - last;
 		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
+
+        dt = deltaClock.restart().asSeconds();
         /*
          *  // logic for updating camera pos around a point
          *
@@ -410,43 +474,45 @@ int main() {
          *  }
          *
          */
-        int lastX;
-        int lastY;
+        // int lastX;
+        // int lastY;
+        //
+        // if (firstMove) {
+        //     lastX = mousePosition.x;
+        //     lastY = mousePosition.y;
+        //     yaw = -90.f;
+        //     firstMove = false;
+        // }
+        //
+        // float offsetX = mousePosition.x - lastX;
+        // float offsetY = lastY - mousePosition.y;
+        // lastX = mousePosition.x;
+        // lastY = mousePosition.y;
+        //
+        // float sensitivity = 0.3f;
+        // offsetX *= sensitivity;
+        // offsetY *= sensitivity;
+        //
+        //
+        // yaw += offsetX; // yaw
+        // pitch += offsetY; // pitch
+        //
+        // if(pitch > 89.0f)
+        //     pitch = 89.0f;
+        // if(pitch < -89.0f)
+        //     pitch = -89.0f;
+        //
+        // glm::vec3 direction;
+        // direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        // direction.y = sin(glm::radians(pitch));
+        // direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        //
+        // myScene.camera.front = glm::normalize(direction);
 
-        if (firstMove) {
-            lastX = mousePosition.x;
-            lastY = mousePosition.y;
-            yaw = -90.f;
-            firstMove = false;
-        }
+        myScene.camera.speed = 2.5f * dt;
 
-        float offsetX = mousePosition.x - lastX;
-        float offsetY = lastY - mousePosition.y;
-        lastX = mousePosition.x;
-        lastY = mousePosition.y;
-
-        float sensitivity = 0.3f;
-        offsetX *= sensitivity;
-        offsetY *= sensitivity;
-
-
-        yaw += offsetX; // yaw
-        pitch += offsetY; // pitch
-
-        if(pitch > 89.0f)
-            pitch = 89.0f;
-        if(pitch < -89.0f)
-            pitch = -89.0f;
-
-        glm::vec3 direction;
-        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction.y = sin(glm::radians(pitch));
-        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-
-        myScene.camera.front = glm::normalize(direction);
-
-		myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, glm::vec3(0, 1, 0));
-		myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
+		// myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, myScene.camera.up);
+		// myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 		myScene.program.setUniform("view", myScene.camera.view);
 		myScene.program.setUniform("projection", myScene.camera.perspective);

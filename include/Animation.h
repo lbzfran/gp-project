@@ -23,8 +23,8 @@ private:
 	virtual void applyAnimation(float dt) = 0;
 
 public:
-	Animation(Object3D& obj, float duration) : m_object(obj), m_duration(duration),
-		m_currentTime(-1) {
+	Animation(Object3D& obj, float duration) : m_duration(duration),
+		m_currentTime(-1), m_object(obj) {
 	}
 
 	/**

@@ -4,7 +4,7 @@ void Animator::nextAnimation() {
 	// Increase the animation index, and start the next animation if there is one.
 	++m_currentIndex;
 
-	if (m_currentIndex < m_animations.size()) {
+	if (m_currentIndex < static_cast<int>(m_animations.size())) {
 		m_currentAnimation = m_animations[m_currentIndex].get();
 		m_currentAnimation->start();
 		m_nextTransition = m_nextTransition + m_currentAnimation->duration();

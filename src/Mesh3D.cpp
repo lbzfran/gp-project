@@ -57,7 +57,7 @@ void Mesh3D::render(ShaderProgram& program) const {
     program.setUniform("material", material);
 
 	glBindVertexArray(m_vao);
-	for (auto i = 0; i < m_textures.size(); i++) {
+	for (auto i = 0; i < static_cast<int>(m_textures.size()); i++) {
 		program.setUniform(m_textures[i].samplerName, i);
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, m_textures[i].textureId);
