@@ -316,7 +316,7 @@ glm::vec3 GLVec3Lerp(glm::vec3 a, float t, glm::vec3 b) {
     );
 }
 
-void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition, bool updateMouse = true, glm::vec3 target = glm::vec3(0)) {
+void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition, glm::vec3 position, bool updateMouse = true, glm::vec3 target = glm::vec3(0)) {
     static int lastX;
     static int lastY;
     static bool firstMove = true;
@@ -359,7 +359,7 @@ void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition, bool updateMou
         camera.front = glm::normalize(direction);
     }
 
-    camera.view = glm::lookAt(camera.position, target, camera.up);
+    camera.view = glm::lookAt(position, target, camera.up);
 }
 
 void GLSetCameraUniform(Scene& scene) {
@@ -480,7 +480,6 @@ int main() {
 
     float targetLockCooldown = 0.0;
     bool targetLock = false;
-    glm::vec3 targetCamPos = glm::vec3(0);
     bool isMoving = false;
     bool moveHeld = false;
 
@@ -488,6 +487,7 @@ int main() {
 
     // TODO: lerp target position with camera position
     float lerpedTargetPos = 0.0f;
+    glm::vec3 targetCamPos = glm::vec3(0);
 
     // center the mouse initially.
     sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
@@ -510,6 +510,7 @@ int main() {
             else if (ev.type == sf::Event::Resized) {
                 window.setSize({ ev.size.width, ev.size.height });
                 glViewport(0, 0, ev.size.width, ev.size.height);
+                myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
             }
             else if (ev.type == sf::Event::MouseMoved) {
                 mousePosition = sf::Mouse::getPosition(window);
@@ -537,11 +538,11 @@ int main() {
 		// std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
+
+        // === INPUT ===
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
             if (!targetLockCooldown) {
                 targetLock = !targetLock;
-
-                std::swap(targetCamPos, myScene.camera.position);
 
                 targetLockCooldown = 1.f;
             }
@@ -594,7 +595,8 @@ int main() {
 
         }
 
-
+        // === UPDATE ===
+        // calculates current camera speed
         if (moveHeld) {
             if (moveDirFront) {
                 myScene.camera.speed.x += CAMERA_SPEED_ACCEL * dt;
@@ -620,7 +622,7 @@ int main() {
             myScene.camera.requestUpdate = true;
         }
         else if (isMoving) {
-            std::cout << "speed: x = " << myScene.camera.speed.x << " y = " << myScene.camera.speed.y << " z = " << myScene.camera.speed.z << std::endl;
+            /*std::cout << "speed: x = " << myScene.camera.speed.x << " y = " << myScene.camera.speed.y << " z = " << myScene.camera.speed.z << std::endl;*/
             if (myScene.camera.speed.x + myScene.camera.speed.y + myScene.camera.speed.z) {
 
                 if (myScene.camera.speed.x) {
@@ -657,41 +659,61 @@ int main() {
             }
         }
 
+        // calculate total movement of camera during frame.
+        glm::vec3 cameraDt = glm::vec3(0);
         if (moveDirFront == 1) {
-            myScene.camera.position += myScene.camera.speed.x * myScene.camera.front;
+            cameraDt += myScene.camera.speed.x * myScene.camera.front;
         }
         else if (moveDirFront == -1) {
-            myScene.camera.position -= myScene.camera.speed.x * myScene.camera.front;
+            cameraDt -= myScene.camera.speed.x * myScene.camera.front;
         }
 
         if (moveDirUp == 1) { // y movement
-            myScene.camera.position += myScene.camera.speed.y * myScene.camera.up;
+            cameraDt += myScene.camera.speed.y * myScene.camera.up;
         }
         else if (moveDirUp == -1) {
-            myScene.camera.position -= myScene.camera.speed.y * myScene.camera.up;
+            cameraDt -= myScene.camera.speed.y * myScene.camera.up;
         }
 
         if (moveDirSide == -1) {
-            myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
+            cameraDt -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
         }
         else if (moveDirSide == 1) {
-            myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
+            cameraDt += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
         }
 
-        if (targetLock && lerpedTargetLock < 1.0) {
-            std::cout << "track lerp: " << lerpedTargetLock << std::endl;
-            myScene.camera.requestUpdate = true;
-            lerpedTargetLock += 2.0 * dt;
-            if (lerpedTargetLock >= 1.0) {
-                lerpedTargetLock = 1.0f;
+        if (targetLock) {
+            if (lerpedTargetLock < 1.0) {
+                /*std::cout << "track lerp: " << lerpedTargetLock << std::endl;*/
+                myScene.camera.requestUpdate = true;
+                lerpedTargetLock += 2.0 * dt;
+                if (lerpedTargetLock >= 1.0) {
+                    lerpedTargetLock = 1.0f;
+                }
+            }
+
+            if (lerpedTargetPos < 1.0) {
+                lerpedTargetPos += 2.0 * dt;
+                if (lerpedTargetPos >= 1.0) {
+                    lerpedTargetPos = 1.0f;
+                }
             }
         }
-        else if (!targetLock && lerpedTargetLock > 0.0) {
-            std::cout << "track lerp: " << lerpedTargetLock << std::endl;
-            myScene.camera.requestUpdate = true;
-            lerpedTargetLock -= 2.0 * dt;
-            if (lerpedTargetLock <= 0.0) {
-                lerpedTargetLock = 0.0f;
+        else if (!targetLock) {
+            if (lerpedTargetLock > 0.0) {
+                /*std::cout << "track lerp: " << lerpedTargetLock << std::endl;*/
+                myScene.camera.requestUpdate = true;
+                lerpedTargetLock -= 2.0 * dt;
+                if (lerpedTargetLock <= 0.0) {
+                    lerpedTargetLock = 0.0f;
+                }
+            }
+
+            if (lerpedTargetPos > 0.0) {
+                lerpedTargetPos -= 2.0 * dt;
+                if (lerpedTargetPos <= 0.0) {
+                    lerpedTargetPos = 0.0f;
+                }
             }
         }
 
@@ -702,8 +724,16 @@ int main() {
             }
         }
 
+        // applies movement to current camera focus position
         if (!targetLock) {
-            targetCamPos = myScene.camera.position;
+            myScene.camera.position += cameraDt;
+
+            if (lerpedTargetPos == 0.0) {
+                targetCamPos = myScene.camera.position;
+            }
+        }
+        else {
+            targetCamPos += cameraDt;
         }
 
 
@@ -731,10 +761,11 @@ int main() {
          *
          */
 
-        glm::vec3 target = GLVec3Lerp(myScene.camera.position + myScene.camera.front, lerpedTargetLock, myScene.objects[0].getPosition());
+        glm::vec3 cameraPos = GLVec3Lerp(myScene.camera.position, lerpedTargetPos, targetCamPos);
+        glm::vec3 target = GLVec3Lerp(cameraPos + myScene.camera.front, lerpedTargetLock, myScene.objects[0].getPosition());
 
         if (myScene.camera.requestUpdate) {
-            UpdateCamera(myScene.camera, mousePosition, !targetLock, target);
+            UpdateCamera(myScene.camera, mousePosition, cameraPos, !targetLock, target);
             myScene.camera.requestUpdate = false;
         }
         GLSetCameraUniform(myScene);
