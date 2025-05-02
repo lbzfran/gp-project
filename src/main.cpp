@@ -27,29 +27,39 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
 
-// #define SFML_V2
+#define SFML_V2
+
+#define CAMERA_SPEED_MAX 0.2f
+#define CAMERA_SPEED_ACCEL 0.1f
+#define CAMERA_SPEED_DECAY 0.4f
 
 struct DirLight {
-    glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
+    bool display = true;
+
+    glm::vec3 direction{ 1.0f, -1.0f, -1.0f };
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
     glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular;
+    glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
 };
 
 struct PointLight {
+    bool display = true;
+
     glm::vec3 position;
 
     float constant = 1.0f;
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient;
-    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
-    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.3f, 0.4f, 0.4f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
 struct SpotLight {
+    bool display = true;
+
     glm::vec3 position;
     glm::vec3 direction;
     float cutOff;
@@ -58,9 +68,9 @@ struct SpotLight {
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient{ 0.0f, 0.0f, 0.0f };
-    glm::vec3 diffuse{ 0.f, 0.0f, 0.f };
-    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.8f, 0.8f, 0.8f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
 struct Camera {
@@ -68,10 +78,15 @@ struct Camera {
     glm::vec3 position{ 0.0f, 0.0f, 5.0f };
     glm::vec3 orientation;
     glm::vec3 up{ 0.0f, 1.0f, 0.0f };
-    float speed = 0.05f;
+
+    // front, up, and side speed
+    glm::vec3 speed{ 0.f, 0.f, 0.f };
 
     glm::mat4 view;
     glm::mat4 perspective;
+
+
+    bool requestUpdate = true;
 };
 
 struct Scene {
@@ -92,7 +107,7 @@ struct Scene {
 ShaderProgram toonLightingShader() {
 	ShaderProgram shader;
 	try {
-		shader.load("shaders/light_perspective.vert", "shaders/cell_lighting.frag");
+		shader.load("shaders/light_perspective.vert", "shaders/gl_cell_lighting.frag");
 	}
 	catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -107,7 +122,7 @@ ShaderProgram toonLightingShader() {
 ShaderProgram phongLightingShader() {
 	ShaderProgram shader;
 	try {
-		shader.load("shaders/light_perspective.vert", "shaders/lighting.frag");
+		shader.load("shaders/light_perspective.vert", "shaders/gl_phong_lighting.frag");
 	}
 	catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -186,7 +201,7 @@ Scene bunny() {
  * that does not come from Assimp.
  */
 Scene marbleSquare() {
-	Scene scene{ texturingShader() };
+	Scene scene{ toonLightingShader() };
 
 	std::vector<Texture> textures = {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "baseTexture"),
@@ -289,7 +304,19 @@ Scene Rinoa() {
     return scene;
 }
 
-void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition) {
+float Lerp(float a, float t, float b) {
+    return a * (1 - t) + b * t;
+}
+
+glm::vec3 GLVec3Lerp(glm::vec3 a, float t, glm::vec3 b) {
+    return glm::vec3(
+        Lerp(a.x, t, b.x),
+        Lerp(a.y, t, b.y),
+        Lerp(a.z, t, b.z)
+    );
+}
+
+void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition, bool updateMouse = true, glm::vec3 target = glm::vec3(0)) {
     static int lastX;
     static int lastY;
     static bool firstMove = true;
@@ -297,41 +324,109 @@ void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition) {
 
     glm::vec3 direction;
 
-    float offsetX = mousePosition.x - lastX;
-    float offsetY = lastY - mousePosition.y;
+    if (updateMouse) {
+        float offsetX = mousePosition.x - lastX;
+        float offsetY = lastY - mousePosition.y;
 
-    float& yaw = camera.orientation.x;
-    float& pitch = camera.orientation.y;
+        float& yaw = camera.orientation.x;
+        float& pitch = camera.orientation.y;
 
-    if (firstMove) {
+        if (firstMove) {
+            lastX = mousePosition.x;
+            lastY = mousePosition.y;
+            yaw = -90.f;
+            firstMove = false;
+        }
+
         lastX = mousePosition.x;
         lastY = mousePosition.y;
-        yaw = -90.f;
-        firstMove = false;
+
+        offsetX *= sensitivity;
+        offsetY *= sensitivity;
+
+        yaw += offsetX; // yaw
+        pitch += offsetY; // pitch
+
+        if(pitch > 89.0f)
+            pitch = 89.0f;
+        if(pitch < -89.0f)
+            pitch = -89.0f;
+
+        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.y = sin(glm::radians(pitch));
+        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+        camera.front = glm::normalize(direction);
     }
 
-    lastX = mousePosition.x;
-    lastY = mousePosition.y;
-
-    offsetX *= sensitivity;
-    offsetY *= sensitivity;
-
-    yaw += offsetX; // yaw
-    pitch += offsetY; // pitch
-
-    if(pitch > 89.0f)
-        pitch = 89.0f;
-    if(pitch < -89.0f)
-        pitch = -89.0f;
-
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-
-    camera.front = glm::normalize(direction);
-    camera.view = glm::lookAt(camera.position, camera.position + camera.front, camera.up);
+    camera.view = glm::lookAt(camera.position, target, camera.up);
 }
 
+void GLSetCameraUniform(Scene& scene) {
+    Camera& camera = scene.camera;
+    ShaderProgram& program = scene.program;
+
+    program.setUniform("view", camera.view);
+    program.setUniform("projection", camera.perspective);
+    program.setUniform("viewPos", camera.position);
+
+    /// lighting
+    // directional light
+    if (scene.dlight.display) {
+        program.setUniform("dirLight.direction", scene.dlight.direction);
+        program.setUniform("dirLight.ambient", scene.dlight.ambient);
+        program.setUniform("dirLight.diffuse", scene.dlight.diffuse);
+        program.setUniform("dirLight.specular", scene.dlight.specular);
+    }
+    else {
+        program.setUniform("dirLight.ambient", glm::vec3(0));
+        program.setUniform("dirLight.diffuse", glm::vec3(0));
+        program.setUniform("dirLight.specular", glm::vec3(0));
+    }
+
+    // point light
+    if (scene.plight.display) {
+        program.setUniform("pointLight.position", scene.plight.position);
+
+        program.setUniform("pointLight.constant", scene.plight.constant);
+        program.setUniform("pointLight.linear", scene.plight.linear);
+        program.setUniform("pointLight.quadratic", scene.plight.quadratic);
+
+        program.setUniform("pointLight.ambient", scene.plight.ambient);
+        program.setUniform("pointLight.diffuse", scene.plight.diffuse);
+        program.setUniform("pointLight.specular", scene.plight.specular);
+    }
+    else {
+        program.setUniform("pointLight.ambient", glm::vec3(0));
+        program.setUniform("pointLight.diffuse", glm::vec3(0));
+        program.setUniform("pointLight.specular", glm::vec3(0));
+    }
+
+    // spotlight
+    if (scene.slight.display) {
+        program.setUniform("spotLight.direction", scene.slight.direction);
+        program.setUniform("spotLight.position", scene.slight.position);
+        program.setUniform("spotLight.cutOff", scene.slight.cutOff);
+
+        // flashlight
+        /*program.setUniform("spotLight.direction", camera.front);*/
+        /*program.setUniform("spotLight.position", camera.position);*/
+        /*program.setUniform("spotLight.cutOff", glm::cos(glm::radians(25.f)));*/
+
+        program.setUniform("spotLight.constant", scene.slight.constant);
+        program.setUniform("spotLight.linear", scene.slight.linear);
+        program.setUniform("spotLight.quadratic", scene.slight.quadratic);
+
+        program.setUniform("spotLight.ambient", scene.slight.ambient);
+        program.setUniform("spotLight.diffuse", scene.slight.diffuse);
+        program.setUniform("spotLight.specular", scene.slight.specular);
+    }
+    else {
+        program.setUniform("spotLight.ambient", glm::vec3(0));
+        program.setUniform("spotLight.diffuse", glm::vec3(0));
+        program.setUniform("spotLight.specular", glm::vec3(0));
+    }
+}
 
 int main() {
 
@@ -354,7 +449,7 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 
 	// Inintialize scene objects.
-	auto myScene = Rinoa();
+	auto myScene = marbleSquare();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 
@@ -379,9 +474,20 @@ int main() {
 	}
 
     //
-    int moveDirX = 0;
-    int moveDirY = 0;
+    int moveDirUp = 0;
+    int moveDirFront = 0;
+    int moveDirSide = 0;
+
+    float targetLockCooldown = 0.0;
+    bool targetLock = false;
+    glm::vec3 targetCamPos = glm::vec3(0);
     bool isMoving = false;
+    bool moveHeld = false;
+
+    float lerpedTargetLock = 0.0f;
+
+    // TODO: lerp target position with camera position
+    float lerpedTargetPos = 0.0f;
 
     // center the mouse initially.
     sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
@@ -390,40 +496,29 @@ int main() {
     window.setMouseCursorGrabbed(true);
     // window.setKeyRepeatEnabled(true);
 
-    UpdateCamera(myScene.camera, mousePosition);
+    // initialize camera
     myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 	while (running) {
         dt = deltaClock.restart().asSeconds();
-        isMoving = false;
 #ifdef SFML_V2
         sf::Event ev;
         while (window.pollEvent(ev)) {
-			if (ev.type == sf::Event::Closed) {
+			if (ev.type == sf::Event::Closed || (ev.type == sf::Event::KeyPressed && ev.key.code == sf::Keyboard::Key::Escape)) {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
                 window.setSize({ ev.size.width, ev.size.height });
                 glViewport(0, 0, ev.size.width, ev.size.height);
             }
-            else if (ev.type == sf::Event::KeyPressed) {
-                switch (ev.key.code) {
-                    case sf::Keyboard::Key::Escape: {
-                        running = false;
-                    } break;
-                    default: {
-
-                    } break;
-                }
-            }
             else if (ev.type == sf::Event::MouseMoved) {
-                mousePosition.x = ev.mouseMove.x;
-                mousePosition.y = ev.mouseMove.y;
+                mousePosition = sf::Mouse::getPosition(window);
+                myScene.camera.requestUpdate = true;
             }
         }
 #else
         while (const std::optional ev = window.pollEvent()) {
-            if (ev->getIf<sf::Event::Closed>() || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) {
+            if (ev->getIf<sf::Event::Closed>() || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
@@ -431,33 +526,9 @@ int main() {
                 glViewport(0, 0, resized->size.x, resized->size.y);
                 myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
             }
-            else if (const auto* mouseMoved = ev->getIf<sf::Event::MouseMoved>()) {
-                mousePosition = mouseMoved->position;
-                UpdateCamera(myScene.camera, mousePosition);
-
-                // window.setMouseCursorGrabbed(false);
-                // sf::Mouse::setPosition({window.getSize().x / 2, window.getSize().y / 2});
-                // window.setMouseCursorGrabbed(true);
-            }
-
-            if (ev->is<sf::Event::KeyPressed>()) {
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
-                    isMoving = true;
-                    moveDirX = 1;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
-                    isMoving = true;
-                    moveDirX = -1;
-                }
-
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-                    isMoving = true;
-                    moveDirY = -1;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-                    isMoving = true;
-                    moveDirY = 1;
-                }
+            else if (ev->is<sf::Event::MouseMoved>()) {
+                mousePosition = sf::Mouse::getPosition(window);
+                myScene.camera.requestUpdate = true;
             }
 		}
 #endif
@@ -466,23 +537,176 @@ int main() {
 		// std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
-        if (isMoving) {
-            if (moveDirX == 1) {
-                myScene.camera.position += myScene.camera.speed * myScene.camera.front;
-            }
-            else if (moveDirX == -1) {
-                myScene.camera.position -= myScene.camera.speed * myScene.camera.front;
-            }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
+            if (!targetLockCooldown) {
+                targetLock = !targetLock;
 
-            if (moveDirY == -1) {
-                myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+                std::swap(targetCamPos, myScene.camera.position);
+
+                targetLockCooldown = 1.f;
             }
-            else if (moveDirY == 1) {
-                myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
+            if (moveDirFront == -1) {
+                myScene.camera.speed.x = 0.f;
             }
-            UpdateCamera(myScene.camera, mousePosition);
+            moveHeld = true;
+            moveDirFront = 1;
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
+            if (moveDirFront == 1) {
+                myScene.camera.speed.x = 0.f;
+            }
+            moveHeld = true;
+            moveDirFront = -1;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
+            if (moveDirSide == 1) {
+                myScene.camera.speed.z = 0.f;
+            }
+            moveHeld = true;
+            moveDirSide = -1;
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+            if (moveDirSide == -1) {
+                myScene.camera.speed.z = 0.f;
+            }
+            moveHeld = true;
+            moveDirSide = 1;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) {
+            if (moveDirUp == 1) {
+                myScene.camera.speed.y = 0.f;
+            }
+            moveHeld = true;
+            moveDirUp = -1;
 
         }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) {
+            if (moveDirUp == -1) {
+                myScene.camera.speed.y = 0.f;
+            }
+            moveHeld = true;
+            moveDirUp = 1;
+
+        }
+
+
+        if (moveHeld) {
+            if (moveDirFront) {
+                myScene.camera.speed.x += CAMERA_SPEED_ACCEL * dt;
+                if (myScene.camera.speed.x >= CAMERA_SPEED_MAX) {
+                    myScene.camera.speed.x = CAMERA_SPEED_MAX;
+                }
+            }
+            if (moveDirSide) {
+                myScene.camera.speed.z += CAMERA_SPEED_ACCEL * dt;
+                if (myScene.camera.speed.z >= CAMERA_SPEED_MAX) {
+                    myScene.camera.speed.z = CAMERA_SPEED_MAX;
+                }
+            }
+            if (moveDirUp) {
+                myScene.camera.speed.y += CAMERA_SPEED_ACCEL * dt;
+                if (myScene.camera.speed.y >= CAMERA_SPEED_MAX) {
+                    myScene.camera.speed.y = CAMERA_SPEED_MAX;
+                }
+            }
+
+            moveHeld = false;
+            isMoving = true;
+            myScene.camera.requestUpdate = true;
+        }
+        else if (isMoving) {
+            std::cout << "speed: x = " << myScene.camera.speed.x << " y = " << myScene.camera.speed.y << " z = " << myScene.camera.speed.z << std::endl;
+            if (myScene.camera.speed.x + myScene.camera.speed.y + myScene.camera.speed.z) {
+
+                if (myScene.camera.speed.x) {
+                    myScene.camera.speed.x -= CAMERA_SPEED_DECAY * dt;
+
+                    if (myScene.camera.speed.x <= 0.0f) {
+                        myScene.camera.speed.x = 0.0f;
+
+                        moveDirFront = 0;
+                    }
+                }
+                if (myScene.camera.speed.y) {
+                    myScene.camera.speed.y -= CAMERA_SPEED_DECAY * dt;
+
+                    if (myScene.camera.speed.y <= 0.0f) {
+                        myScene.camera.speed.y = 0.0f;
+
+                        moveDirSide = 0;
+                    }
+                }
+                if (myScene.camera.speed.z) {
+                    myScene.camera.speed.z -= CAMERA_SPEED_DECAY * dt;
+
+                    if (myScene.camera.speed.z <= 0.0f) {
+                        myScene.camera.speed.z = 0.0f;
+
+                        moveDirUp = 0;
+                    }
+                }
+                myScene.camera.requestUpdate = true;
+            }
+            else {
+                isMoving = false;
+            }
+        }
+
+        if (moveDirFront == 1) {
+            myScene.camera.position += myScene.camera.speed.x * myScene.camera.front;
+        }
+        else if (moveDirFront == -1) {
+            myScene.camera.position -= myScene.camera.speed.x * myScene.camera.front;
+        }
+
+        if (moveDirUp == 1) { // y movement
+            myScene.camera.position += myScene.camera.speed.y * myScene.camera.up;
+        }
+        else if (moveDirUp == -1) {
+            myScene.camera.position -= myScene.camera.speed.y * myScene.camera.up;
+        }
+
+        if (moveDirSide == -1) {
+            myScene.camera.position -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
+        }
+        else if (moveDirSide == 1) {
+            myScene.camera.position += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
+        }
+
+        if (targetLock && lerpedTargetLock < 1.0) {
+            std::cout << "track lerp: " << lerpedTargetLock << std::endl;
+            myScene.camera.requestUpdate = true;
+            lerpedTargetLock += 2.0 * dt;
+            if (lerpedTargetLock >= 1.0) {
+                lerpedTargetLock = 1.0f;
+            }
+        }
+        else if (!targetLock && lerpedTargetLock > 0.0) {
+            std::cout << "track lerp: " << lerpedTargetLock << std::endl;
+            myScene.camera.requestUpdate = true;
+            lerpedTargetLock -= 2.0 * dt;
+            if (lerpedTargetLock <= 0.0) {
+                lerpedTargetLock = 0.0f;
+            }
+        }
+
+        if (targetLockCooldown > 0.0) {
+            targetLockCooldown -= dt;
+            if (targetLockCooldown <= 0.0) {
+                targetLockCooldown = 0.0;
+            }
+        }
+
+        if (!targetLock) {
+            targetCamPos = myScene.camera.position;
+        }
+
+
 
         /*
          *  // logic for updating camera pos around a point
@@ -506,80 +730,14 @@ int main() {
          *  }
          *
          */
-        // int lastX;
-        // int lastY;
-        //
-        // if (firstMove) {
-        //     lastX = mousePosition.x;
-        //     lastY = mousePosition.y;
-        //     yaw = -90.f;
-        //     firstMove = false;
-        // }
-        //
-        // float offsetX = mousePosition.x - lastX;
-        // float offsetY = lastY - mousePosition.y;
-        // lastX = mousePosition.x;
-        // lastY = mousePosition.y;
-        //
-        // float sensitivity = 0.3f;
-        // offsetX *= sensitivity;
-        // offsetY *= sensitivity;
-        //
-        //
-        // yaw += offsetX; // yaw
-        // pitch += offsetY; // pitch
-        //
-        // if(pitch > 89.0f)
-        //     pitch = 89.0f;
-        // if(pitch < -89.0f)
-        //     pitch = -89.0f;
-        //
-        // glm::vec3 direction;
-        // direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        // direction.y = sin(glm::radians(pitch));
-        // direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        //
-        // myScene.camera.front = glm::normalize(direction);
 
-        myScene.camera.speed = 2.5f;
+        glm::vec3 target = GLVec3Lerp(myScene.camera.position + myScene.camera.front, lerpedTargetLock, myScene.objects[0].getPosition());
 
-		// myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, myScene.camera.up);
-		// myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
-
-		myScene.program.setUniform("view", myScene.camera.view);
-		myScene.program.setUniform("projection", myScene.camera.perspective);
-		myScene.program.setUniform("viewPos", myScene.camera.position);
-
-        // lighting
-        myScene.program.setUniform("dirLight.direction", myScene.dlight.direction);
-        myScene.program.setUniform("dirLight.ambient", myScene.dlight.ambient);
-        myScene.program.setUniform("dirLight.diffuse", myScene.dlight.diffuse);
-        myScene.program.setUniform("dirLight.specular", myScene.dlight.specular);
-
-        myScene.program.setUniform("pointLight.position", myScene.plight.position);
-
-        myScene.program.setUniform("pointLight.constant", myScene.plight.constant);
-        myScene.program.setUniform("pointLight.linear", myScene.plight.linear);
-        myScene.program.setUniform("pointLight.quadratic", myScene.plight.quadratic);
-
-        myScene.program.setUniform("pointLight.ambient", myScene.plight.ambient);
-        myScene.program.setUniform("pointLight.diffuse", myScene.plight.diffuse);
-        myScene.program.setUniform("pointLight.specular", myScene.plight.specular);
-
-        /*myScene.program.setUniform("spotLight.direction", myScene.slight.direction);*/
-        /*myScene.program.setUniform("spotLight.position", myScene.slight.position);*/
-        /*myScene.program.setUniform("spotLight.cutOff", myScene.slight.cutOff);*/
-        myScene.program.setUniform("spotLight.direction", myScene.camera.front);
-        myScene.program.setUniform("spotLight.position", myScene.camera.position);
-        myScene.program.setUniform("spotLight.cutOff", glm::cos(glm::radians(25.f)));
-
-        myScene.program.setUniform("spotLight.constant", myScene.slight.constant);
-        myScene.program.setUniform("spotLight.linear", myScene.slight.linear);
-        myScene.program.setUniform("spotLight.quadratic", myScene.slight.quadratic);
-
-        myScene.program.setUniform("spotLight.ambient", myScene.slight.ambient);
-        myScene.program.setUniform("spotLight.diffuse", myScene.slight.diffuse);
-        myScene.program.setUniform("spotLight.specular", myScene.slight.specular);
+        if (myScene.camera.requestUpdate) {
+            UpdateCamera(myScene.camera, mousePosition, !targetLock, target);
+            myScene.camera.requestUpdate = false;
+        }
+        GLSetCameraUniform(myScene);
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {
