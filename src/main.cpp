@@ -39,8 +39,8 @@ struct DirLight {
     glm::vec3 direction{ 1.0f, -1.0f, -1.0f };
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
 struct PointLight {
@@ -52,24 +52,24 @@ struct PointLight {
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 0.3f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.0f, 0.0f, 0.4f };
+    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
 struct SpotLight {
     bool display = true;
 
-    glm::vec3 position;
-    glm::vec3 direction;
-    float cutOff;
+    glm::vec3 position{ 0.f, 1.f, 0.f };
+    glm::vec3 direction{ 0.f, -1.f, 0.f };
+    float cutOff = 12.5f;
 
     float constant = 1.0f;
     float linear = 0.14f;
     float quadratic = 0.07f;
 
     glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 0.8f, 0.8f, 0.8f };
+    glm::vec3 diffuse{ 0.8f, 0.0f, 0.0f };
     glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
@@ -265,6 +265,17 @@ Scene lifeOfPi() {
 	// Move the boat into the scene list.
 	scene.objects.push_back(std::move(boat));
 
+	std::vector<Texture> textures = {
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "baseTexture"),
+	};
+	auto mesh = Mesh3D::square(textures);
+	auto floor = Object3D(std::vector<Mesh3D>{mesh});
+	floor.grow(glm::vec3(5, 5, 5));
+	floor.move(glm::vec3(0, -1.5, 0));
+	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
+
+	scene.objects.push_back(std::move(floor));
+
 	// We want these animations to referenced the *moved* objects, which are no longer
 	// in the variables named "tiger" and "boat". "boat" is now in the "objects" list at
 	// index 0, and "tiger" is the index-1 child of the boat.
@@ -282,24 +293,25 @@ Scene lifeOfPi() {
 	return scene;
 }
 
-Scene Rinoa() {
+Scene Classroom() {
 	Scene scene{ toonLightingShader() };
 
     scene.plight.position = {2.f, 2.f, -3.f};
 
-	auto lady = assimpLoad("models/stickman/Simple_Character.fbx", true);
-	lady.grow(glm::vec3(0.25));
-	lady.move(glm::vec3(0, -25, -50));
+	auto room = assimpLoad("models/classroom/scene.gltf", true);
+	room.grow(glm::vec3(0.5f));
+	/*lady.grow(glm::vec3(0.25));*/
+	/*lady.move(glm::vec3(0, -25, -50));*/
 
 	/*auto cube = assimpLoad("models/cube.obj", true);*/
 	/*cube.move(glm::vec3(0.2, -1, -10));*/
 
-	scene.objects.push_back(std::move(lady));
+	scene.objects.push_back(std::move(room));
 
-	Animator animLady;
-	animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));
+	/*Animator animLady;*/
+	/*animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));*/
 
-	scene.animators.push_back(std::move(animLady));
+	/*scene.animators.push_back(std::move(animLady));*/
 
     return scene;
 }
@@ -370,6 +382,8 @@ void GLSetCameraUniform(Scene& scene) {
     program.setUniform("projection", camera.perspective);
     program.setUniform("viewPos", camera.position);
 
+    program.setUniform("ambientColor", glm::vec3(0.2f));
+
     /// lighting
     // directional light
     if (scene.dlight.display) {
@@ -379,7 +393,7 @@ void GLSetCameraUniform(Scene& scene) {
         program.setUniform("dirLight.specular", scene.dlight.specular);
     }
     else {
-        program.setUniform("dirLight.ambient", glm::vec3(0));
+        program.setUniform("dirLight.ambient", scene.dlight.ambient);
         program.setUniform("dirLight.diffuse", glm::vec3(0));
         program.setUniform("dirLight.specular", glm::vec3(0));
     }
@@ -397,21 +411,21 @@ void GLSetCameraUniform(Scene& scene) {
         program.setUniform("pointLight.specular", scene.plight.specular);
     }
     else {
-        program.setUniform("pointLight.ambient", glm::vec3(0));
+        program.setUniform("pointLight.ambient", scene.slight.ambient);
         program.setUniform("pointLight.diffuse", glm::vec3(0));
         program.setUniform("pointLight.specular", glm::vec3(0));
     }
 
     // spotlight
     if (scene.slight.display) {
-        program.setUniform("spotLight.direction", scene.slight.direction);
-        program.setUniform("spotLight.position", scene.slight.position);
-        program.setUniform("spotLight.cutOff", scene.slight.cutOff);
+        /*program.setUniform("spotLight.direction", scene.slight.direction);*/
+        /*program.setUniform("spotLight.position", scene.slight.position);*/
 
         // flashlight
-        /*program.setUniform("spotLight.direction", camera.front);*/
-        /*program.setUniform("spotLight.position", camera.position);*/
-        /*program.setUniform("spotLight.cutOff", glm::cos(glm::radians(25.f)));*/
+        program.setUniform("spotLight.direction", camera.front);
+        program.setUniform("spotLight.position", camera.position);
+
+        program.setUniform("spotLight.cutOff", glm::cos(glm::radians(scene.slight.cutOff)));
 
         program.setUniform("spotLight.constant", scene.slight.constant);
         program.setUniform("spotLight.linear", scene.slight.linear);
@@ -422,7 +436,7 @@ void GLSetCameraUniform(Scene& scene) {
         program.setUniform("spotLight.specular", scene.slight.specular);
     }
     else {
-        program.setUniform("spotLight.ambient", glm::vec3(0));
+        program.setUniform("spotLight.ambient", scene.slight.ambient);
         program.setUniform("spotLight.diffuse", glm::vec3(0));
         program.setUniform("spotLight.specular", glm::vec3(0));
     }
@@ -449,7 +463,7 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 
 	// Inintialize scene objects.
-	auto myScene = marbleSquare();
+	auto myScene = lifeOfPi();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 

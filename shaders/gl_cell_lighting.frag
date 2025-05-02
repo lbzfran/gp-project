@@ -110,16 +110,14 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 eyeDir) {
 
     float theta = dot(lightDir, normalize(-light.direction));
 
-    vec3 ambient = vec3(0);
+    vec3 ambient = material.x * light.ambient * attenuation;
     vec3 diffuse = vec3(0);
     vec3 specular = vec3(0);
 
     if (theta > light.cutOff) {
-        vec3 ambient = material.x * light.ambient;
-        vec3 diffuse = material.y * light.diffuse * lambertFactor;
-        vec3 specular = material.z * light.specular * spec;
+        diffuse = material.y * light.diffuse * lambertFactor;
+        specular = material.z * light.specular * spec;
 
-        ambient *= attenuation;
         diffuse *= attenuation;
         specular *= attenuation;
     }
@@ -132,7 +130,8 @@ void main() {
     vec3 norm = normalize(Normal);
     vec3 eyeDir = normalize(viewPos - FragWorldPos);
 
-    vec3 result = CalcDirLight(dirLight, norm, eyeDir);
+    vec3 result = ambientColor * material.x;
+    result += CalcDirLight(dirLight, norm, eyeDir);
     result += CalcPointLight(pointLight, norm, FragWorldPos, eyeDir);
     result += CalcSpotLight(spotLight, norm, FragWorldPos, eyeDir);
 
