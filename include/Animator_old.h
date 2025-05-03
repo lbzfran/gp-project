@@ -17,12 +17,11 @@ private:
 	/**
 	 * @brief The sequence of animations to play.
 	 */
-    std::vector<std::function<std::unique_ptr<Animation> (void)>> m_animations;
-
+	std::vector<std::unique_ptr<Animation>> m_animations;
 	/**
 	 * @brief The current (active) animation.
 	 */
-    std::unique_ptr<Animation> m_currentAnimation;
+	Animation* m_currentAnimation;
 	/**
 	 * @brief The index of the current animation.
 	 */
@@ -47,7 +46,7 @@ public:
 	/**
 	 * @brief Add an Animation to the end of the animation sequence.
 	 */
-	void addAnimation(std::function<std::unique_ptr<Animation> (void)> animation) {
+	void addAnimation(std::unique_ptr<Animation> animation) {
 		m_animations.emplace_back(std::move(animation));
 	}
 

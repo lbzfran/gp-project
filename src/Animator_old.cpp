@@ -5,8 +5,8 @@ void Animator::nextAnimation() {
 	++m_currentIndex;
 
 	if (m_currentIndex < static_cast<int>(m_animations.size())) {
-		m_currentAnimation = m_animations[m_currentIndex]();
-
+		m_currentAnimation = m_animations[m_currentIndex].get();
+		m_currentAnimation->start();
 		m_nextTransition = m_nextTransition + m_currentAnimation->duration();
 	}
 	else {

@@ -19,15 +19,17 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "AssimpImport.h"
 #include "Mesh3D.h"
 #include "Object3D.h"
-#include "Animator.h"
 #include "ShaderProgram.h"
 #include "Camera.h"
 
+#include "Animator.h"
+#include "RotationAnimation.h"
+#include "TranslationAnimation.h"
+#include "PauseAnimation.h"
+// #include "BezierTranslationAnimation.h"
+
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
-// #include <SFML/Window/Event.hpp>
-// #include <SFML/Window/Window.hpp>
-// #include <SFML/Window/VideoMode.hpp>
 
 // #define SFML_V2
 
@@ -70,23 +72,6 @@ struct SpotLight {
     glm::vec3 diffuse{ 0.4f, 0.4f, 0.0f };
     glm::vec3 specular{ 0.4f, 0.4f, 0.0f };
 };
-
-// struct Camera {
-//     glm::vec3 front;
-//     glm::vec3 position{ 0.0f, 0.0f, 5.0f };
-//     glm::vec3 orientation;
-//     glm::vec3 up{ 0.0f, 1.0f, 0.0f };
-//     glm::vec3 right;
-//
-//     // front, up, and side speed
-//     glm::vec3 speed{ 0.f, 0.f, 0.f };
-//
-//     glm::mat4 view;
-//     glm::mat4 perspective;
-//
-//
-//     bool requestUpdate = true;
-// };
 
 struct Scene {
     ShaderProgram program;
@@ -186,7 +171,11 @@ Scene bunny() {
 
 	Animator spinBunny;
 	// Spin the bunny 360 degrees over 10 seconds.
-	spinBunny.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, 2 * M_PI, 0)));
+	spinBunny.addAnimation(
+        [&] () {
+        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, 2 * M_PI, 0));
+        }
+    );
 
 	// Move all animators into the scene's animators list.
 	scene.animators.push_back(std::move(spinBunny));
@@ -226,9 +215,17 @@ Scene cube() {
 	scene.objects.push_back(std::move(cube));
 
 	Animator spinCube;
-	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, M_PI, 0)));
+	spinCube.addAnimation(
+        [&] () {
+        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, M_PI, 0));
+        }
+    );
 	// Then spin around the x axis.
-	spinCube.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(M_PI, 0, 0)));
+	spinCube.addAnimation(
+        [&] () {
+        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(M_PI, 0, 0));
+        }
+    );
 
 	scene.animators.push_back(std::move(spinCube));
 
@@ -279,9 +276,18 @@ Scene lifeOfPi() {
 	// in the variables named "tiger" and "boat". "boat" is now in the "objects" list at
 	// index 0, and "tiger" is the index-1 child of the boat.
 	Animator animBoat;
-	animBoat.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(0, 2 * M_PI, 0)));
+	animBoat.addAnimation(
+        [&] () {
+        return std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(0, 2 * M_PI, 0));
+        }
+    );
+
 	Animator animTiger;
-	animTiger.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0)));
+	animTiger.addAnimation(
+        [&] () {
+        return std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0));
+        }
+    );
 
 	// The Animators will be destroyed when leaving this function, so we move them into
 	// a list to be returned.
