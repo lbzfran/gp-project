@@ -21,17 +21,15 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "Object3D.h"
 #include "Animator.h"
 #include "ShaderProgram.h"
+#include "Camera.h"
+
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 // #include <SFML/Window/Event.hpp>
 // #include <SFML/Window/Window.hpp>
 // #include <SFML/Window/VideoMode.hpp>
 
-#define SFML_V2
-
-#define CAMERA_SPEED_MAX 0.2f
-#define CAMERA_SPEED_ACCEL 0.1f
-#define CAMERA_SPEED_DECAY 0.4f
+// #define SFML_V2
 
 struct DirLight {
     bool display = true;
@@ -39,7 +37,7 @@ struct DirLight {
     glm::vec3 direction{ 1.0f, -1.0f, -1.0f };
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.1f, 0.1f, 0.1f };
     glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
@@ -52,7 +50,7 @@ struct PointLight {
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 ambient{ 0.0f, 0.0f, 0.2f };
     glm::vec3 diffuse{ 0.0f, 0.0f, 0.4f };
     glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
@@ -65,36 +63,37 @@ struct SpotLight {
     float cutOff = 12.5f;
 
     float constant = 1.0f;
-    float linear = 0.14f;
-    float quadratic = 0.07f;
+    float linear = 0.35f;
+    float quadratic = 0.44f;
 
-    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 diffuse{ 0.8f, 0.0f, 0.0f };
-    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.0f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.0f };
 };
 
-struct Camera {
-    glm::vec3 front;
-    glm::vec3 position{ 0.0f, 0.0f, 5.0f };
-    glm::vec3 orientation;
-    glm::vec3 up{ 0.0f, 1.0f, 0.0f };
-
-    // front, up, and side speed
-    glm::vec3 speed{ 0.f, 0.f, 0.f };
-
-    glm::mat4 view;
-    glm::mat4 perspective;
-
-
-    bool requestUpdate = true;
-};
+// struct Camera {
+//     glm::vec3 front;
+//     glm::vec3 position{ 0.0f, 0.0f, 5.0f };
+//     glm::vec3 orientation;
+//     glm::vec3 up{ 0.0f, 1.0f, 0.0f };
+//     glm::vec3 right;
+//
+//     // front, up, and side speed
+//     glm::vec3 speed{ 0.f, 0.f, 0.f };
+//
+//     glm::mat4 view;
+//     glm::mat4 perspective;
+//
+//
+//     bool requestUpdate = true;
+// };
 
 struct Scene {
     ShaderProgram program;
     std::vector<Object3D> objects;
     std::vector<Animator> animators;
 
-    Camera camera;
+    Camera camera = Camera();
 
     DirLight dlight;
     PointLight plight;
@@ -316,64 +315,6 @@ Scene Classroom() {
     return scene;
 }
 
-float Lerp(float a, float t, float b) {
-    return a * (1 - t) + b * t;
-}
-
-glm::vec3 GLVec3Lerp(glm::vec3 a, float t, glm::vec3 b) {
-    return glm::vec3(
-        Lerp(a.x, t, b.x),
-        Lerp(a.y, t, b.y),
-        Lerp(a.z, t, b.z)
-    );
-}
-
-void UpdateCamera(Camera& camera, sf::Vector2<int> mousePosition, glm::vec3 position, bool updateMouse = true, glm::vec3 target = glm::vec3(0)) {
-    static int lastX;
-    static int lastY;
-    static bool firstMove = true;
-    static float sensitivity = 0.3f;
-
-    glm::vec3 direction;
-
-    if (updateMouse) {
-        float offsetX = mousePosition.x - lastX;
-        float offsetY = lastY - mousePosition.y;
-
-        float& yaw = camera.orientation.x;
-        float& pitch = camera.orientation.y;
-
-        if (firstMove) {
-            lastX = mousePosition.x;
-            lastY = mousePosition.y;
-            yaw = -90.f;
-            firstMove = false;
-        }
-
-        lastX = mousePosition.x;
-        lastY = mousePosition.y;
-
-        offsetX *= sensitivity;
-        offsetY *= sensitivity;
-
-        yaw += offsetX; // yaw
-        pitch += offsetY; // pitch
-
-        if(pitch > 89.0f)
-            pitch = 89.0f;
-        if(pitch < -89.0f)
-            pitch = -89.0f;
-
-        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction.y = sin(glm::radians(pitch));
-        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-
-        camera.front = glm::normalize(direction);
-    }
-
-    camera.view = glm::lookAt(position, target, camera.up);
-}
-
 void GLSetCameraUniform(Scene& scene) {
     Camera& camera = scene.camera;
     ShaderProgram& program = scene.program;
@@ -382,7 +323,7 @@ void GLSetCameraUniform(Scene& scene) {
     program.setUniform("projection", camera.perspective);
     program.setUniform("viewPos", camera.position);
 
-    program.setUniform("ambientColor", glm::vec3(0.2f));
+    program.setUniform("ambientColor", glm::vec3(0.1f));
 
     /// lighting
     // directional light
@@ -480,38 +421,23 @@ int main() {
 
     float dt = 0.f;
 
-    // myScene.camera.view = glm::lookAt(myScene.camera.position, myScene.camera.position + myScene.camera.front, myScene.camera.up);
-
 	// Start the animators.
 	for (auto& anim : myScene.animators) {
 		anim.start();
 	}
 
-    //
-    int moveDirUp = 0;
-    int moveDirFront = 0;
-    int moveDirSide = 0;
-
     float targetLockCooldown = 0.0;
     bool targetLock = false;
-    bool isMoving = false;
+
     bool moveHeld = false;
 
-    float lerpedTargetLock = 0.0f;
-
-    // TODO: lerp target position with camera position
-    float lerpedTargetPos = 0.0f;
-    glm::vec3 targetCamPos = glm::vec3(0);
-
     // center the mouse initially.
+    sf::Vector2<int> lastPosition = {};
     sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
     sf::Mouse::setPosition(mousePosition, window);
     window.setMouseCursorVisible(false);
     window.setMouseCursorGrabbed(true);
     // window.setKeyRepeatEnabled(true);
-
-    // initialize camera
-    myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
 
 	while (running) {
         dt = deltaClock.restart().asSeconds();
@@ -524,11 +450,14 @@ int main() {
             else if (ev.type == sf::Event::Resized) {
                 window.setSize({ ev.size.width, ev.size.height });
                 glViewport(0, 0, ev.size.width, ev.size.height);
-                myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
+
+                myScene.camera.RequestPerspective();
             }
             else if (ev.type == sf::Event::MouseMoved) {
+                lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
-                myScene.camera.requestUpdate = true;
+
+                myScene.camera.ProcessMouseMove(mousePosition.x - lastPosition.x, lastPosition.y - mousePosition.y);
             }
         }
 #else
@@ -539,11 +468,13 @@ int main() {
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
                 window.setSize(resized->size);
                 glViewport(0, 0, resized->size.x, resized->size.y);
-                myScene.camera.perspective = glm::perspective(glm::radians(45.0), static_cast<double>(window.getSize().x) / window.getSize().y, 0.1, 100.0);
+                myScene.camera.RequestPerspective();
             }
             else if (ev->is<sf::Event::MouseMoved>()) {
+                lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
-                myScene.camera.requestUpdate = true;
+
+                myScene.camera.ProcessMouseMove(mousePosition.x - lastPosition.x, lastPosition.y - mousePosition.y);
             }
 		}
 #endif
@@ -562,174 +493,40 @@ int main() {
             }
         }
 
+        glm::vec3 direction = glm::vec3(0);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
-            if (moveDirFront == -1) {
-                myScene.camera.speed.x = 0.f;
-            }
             moveHeld = true;
-            moveDirFront = 1;
+            direction.x = 1.f;
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
-            if (moveDirFront == 1) {
-                myScene.camera.speed.x = 0.f;
-            }
             moveHeld = true;
-            moveDirFront = -1;
+            direction.x = -1.f;
         }
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-            if (moveDirSide == 1) {
-                myScene.camera.speed.z = 0.f;
-            }
             moveHeld = true;
-            moveDirSide = -1;
+            direction.z = -1.f;
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-            if (moveDirSide == -1) {
-                myScene.camera.speed.z = 0.f;
-            }
             moveHeld = true;
-            moveDirSide = 1;
+            direction.z = 1.f;
         }
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) {
-            if (moveDirUp == 1) {
-                myScene.camera.speed.y = 0.f;
-            }
             moveHeld = true;
-            moveDirUp = -1;
+            direction.y = -1.f;
 
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) {
-            if (moveDirUp == -1) {
-                myScene.camera.speed.y = 0.f;
-            }
             moveHeld = true;
-            moveDirUp = 1;
+            direction.y = 1.f;
+        }
 
+        if (moveHeld) {
+            myScene.camera.ProcessKeyboard(direction, dt);
         }
 
         // === UPDATE ===
-        // calculates current camera speed
-        if (moveHeld) {
-            if (moveDirFront) {
-                myScene.camera.speed.x += CAMERA_SPEED_ACCEL * dt;
-                if (myScene.camera.speed.x >= CAMERA_SPEED_MAX) {
-                    myScene.camera.speed.x = CAMERA_SPEED_MAX;
-                }
-            }
-            if (moveDirSide) {
-                myScene.camera.speed.z += CAMERA_SPEED_ACCEL * dt;
-                if (myScene.camera.speed.z >= CAMERA_SPEED_MAX) {
-                    myScene.camera.speed.z = CAMERA_SPEED_MAX;
-                }
-            }
-            if (moveDirUp) {
-                myScene.camera.speed.y += CAMERA_SPEED_ACCEL * dt;
-                if (myScene.camera.speed.y >= CAMERA_SPEED_MAX) {
-                    myScene.camera.speed.y = CAMERA_SPEED_MAX;
-                }
-            }
-
-            moveHeld = false;
-            isMoving = true;
-            myScene.camera.requestUpdate = true;
-        }
-        else if (isMoving) {
-            /*std::cout << "speed: x = " << myScene.camera.speed.x << " y = " << myScene.camera.speed.y << " z = " << myScene.camera.speed.z << std::endl;*/
-            if (myScene.camera.speed.x + myScene.camera.speed.y + myScene.camera.speed.z) {
-
-                if (myScene.camera.speed.x) {
-                    myScene.camera.speed.x -= CAMERA_SPEED_DECAY * dt;
-
-                    if (myScene.camera.speed.x <= 0.0f) {
-                        myScene.camera.speed.x = 0.0f;
-
-                        moveDirFront = 0;
-                    }
-                }
-                if (myScene.camera.speed.y) {
-                    myScene.camera.speed.y -= CAMERA_SPEED_DECAY * dt;
-
-                    if (myScene.camera.speed.y <= 0.0f) {
-                        myScene.camera.speed.y = 0.0f;
-
-                        moveDirSide = 0;
-                    }
-                }
-                if (myScene.camera.speed.z) {
-                    myScene.camera.speed.z -= CAMERA_SPEED_DECAY * dt;
-
-                    if (myScene.camera.speed.z <= 0.0f) {
-                        myScene.camera.speed.z = 0.0f;
-
-                        moveDirUp = 0;
-                    }
-                }
-                myScene.camera.requestUpdate = true;
-            }
-            else {
-                isMoving = false;
-            }
-        }
-
-        // calculate total movement of camera during frame.
-        glm::vec3 cameraDt = glm::vec3(0);
-        if (moveDirFront == 1) {
-            cameraDt += myScene.camera.speed.x * myScene.camera.front;
-        }
-        else if (moveDirFront == -1) {
-            cameraDt -= myScene.camera.speed.x * myScene.camera.front;
-        }
-
-        if (moveDirUp == 1) { // y movement
-            cameraDt += myScene.camera.speed.y * myScene.camera.up;
-        }
-        else if (moveDirUp == -1) {
-            cameraDt -= myScene.camera.speed.y * myScene.camera.up;
-        }
-
-        if (moveDirSide == -1) {
-            cameraDt -= glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
-        }
-        else if (moveDirSide == 1) {
-            cameraDt += glm::normalize(glm::cross(myScene.camera.front, myScene.camera.up)) * myScene.camera.speed.z;
-        }
-
-        if (targetLock) {
-            if (lerpedTargetLock < 1.0) {
-                /*std::cout << "track lerp: " << lerpedTargetLock << std::endl;*/
-                myScene.camera.requestUpdate = true;
-                lerpedTargetLock += 2.0 * dt;
-                if (lerpedTargetLock >= 1.0) {
-                    lerpedTargetLock = 1.0f;
-                }
-            }
-
-            if (lerpedTargetPos < 1.0) {
-                lerpedTargetPos += 2.0 * dt;
-                if (lerpedTargetPos >= 1.0) {
-                    lerpedTargetPos = 1.0f;
-                }
-            }
-        }
-        else if (!targetLock) {
-            if (lerpedTargetLock > 0.0) {
-                /*std::cout << "track lerp: " << lerpedTargetLock << std::endl;*/
-                myScene.camera.requestUpdate = true;
-                lerpedTargetLock -= 2.0 * dt;
-                if (lerpedTargetLock <= 0.0) {
-                    lerpedTargetLock = 0.0f;
-                }
-            }
-
-            if (lerpedTargetPos > 0.0) {
-                lerpedTargetPos -= 2.0 * dt;
-                if (lerpedTargetPos <= 0.0) {
-                    lerpedTargetPos = 0.0f;
-                }
-            }
-        }
 
         if (targetLockCooldown > 0.0) {
             targetLockCooldown -= dt;
@@ -738,50 +535,14 @@ int main() {
             }
         }
 
-        // applies movement to current camera focus position
-        if (!targetLock) {
-            myScene.camera.position += cameraDt;
-
-            if (lerpedTargetPos == 0.0) {
-                targetCamPos = myScene.camera.position;
-            }
+        if (targetLock) {
+            myScene.camera.SetTarget(myScene.objects[0].getPosition());
         }
-        else {
-            targetCamPos += cameraDt;
+        else if (!targetLock) {
+            myScene.camera.DropTarget();
         }
 
-
-
-        /*
-         *  // logic for updating camera pos around a point
-         *
-         *  given theta  (angle), r (distance) representing polar coords;
-         *  if (key A is pressed) {
-         *      theta = ...;
-         *      cameraPos = glm:vec3(r * cos(theta), ___, r * sin(theta));
-         *  }
-         *  given cameraDir (vector 3);
-         *  camTarget = cameraPos + cameraTarget;
-         *
-         *  // rotate based on user input
-         *  if (key RightArrow is pressed) {
-         *      cameraDir = glm::rotate(cameraDir, glm::vec3(0,1,0), 0.001);
-         *  }
-         *
-         *  // move camera based on user input
-         *  if (key W is pressed) {
-         *      cameraPos = cameraPos + cameraDir * 0.0001 (or dt);
-         *  }
-         *
-         */
-
-        glm::vec3 cameraPos = GLVec3Lerp(myScene.camera.position, lerpedTargetPos, targetCamPos);
-        glm::vec3 target = GLVec3Lerp(cameraPos + myScene.camera.front, lerpedTargetLock, myScene.objects[0].getPosition());
-
-        if (myScene.camera.requestUpdate) {
-            UpdateCamera(myScene.camera, mousePosition, cameraPos, !targetLock, target);
-            myScene.camera.requestUpdate = false;
-        }
+        myScene.camera.update((float)window.getSize().x, (float)window.getSize().y, dt);
         GLSetCameraUniform(myScene);
 
 		// Update the scene.
