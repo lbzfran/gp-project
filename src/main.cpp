@@ -408,6 +408,7 @@ int main() {
 #endif
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
 	// Inintialize scene objects.
 	auto myScene = lifeOfPi();
