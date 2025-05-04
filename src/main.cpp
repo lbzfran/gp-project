@@ -56,7 +56,7 @@ struct PointLight {
     float quadratic = 0.07f;
 
     glm::vec3 ambient{ 0.0f, 0.0f, 0.2f };
-    glm::vec3 diffuse{ 0.0f, 0.0f, 0.4f };
+    glm::vec3 diffuse{ 0.0f, 0.4f, 0.0f };
     glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
@@ -65,15 +65,15 @@ struct SpotLight {
 
     glm::vec3 position{ 0.f, 1.f, 0.f };
     glm::vec3 direction{ 0.f, -1.f, 0.f };
-    float cutOff = 12.5f;
+    float cutOff = 25.f;
 
     float constant = 1.0f;
     float linear = 0.35f;
     float quadratic = 0.44f;
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.0f };
-    glm::vec3 specular{ 0.4f, 0.4f, 0.0f };
+    glm::vec3 diffuse{ 0.4f, 0.0f, 0.4f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
 struct Scene {
@@ -106,7 +106,7 @@ ShaderProgram toonLightingShader() {
 ShaderProgram framebufferShader() {
     ShaderProgram shader;
     try {
-        shader.load("shaders/post_process/simple_framebuffer.vert", "shaders/post_process/simple_framebuffer.frag");
+        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_simple.frag");
     }
     catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -160,7 +160,7 @@ ShaderProgram simpleShader() {
 /**
  * @brief Loads an image from the given path into an OpenGL texture.
  */
-Texture loadTexture(const std::filesystem::path& path, const std::string& samplerName = "baseTexture") {
+Texture loadTexture(const std::filesystem::path& path, const std::string& samplerName = "material.diffuse") {
 	StbImage i;
 	i.loadFromFile(path.string());
 	return Texture::loadImage(i, samplerName);
@@ -207,7 +207,25 @@ Scene marbleSquare() {
 	Scene scene{ toonLightingShader() };
 
 	std::vector<Texture> textures = {
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "baseTexture"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
+	};
+	auto mesh = Mesh3D::square(textures);
+	auto floor = Object3D(std::vector<Mesh3D>{mesh});
+	floor.grow(glm::vec3(5, 5, 5));
+	floor.move(glm::vec3(0, -1.5, 0));
+	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
+
+	scene.objects.push_back(std::move(floor));
+	return scene;
+}
+
+Scene testSquare() {
+	Scene scene{ toonLightingShader() };
+
+	std::vector<Texture> textures = {
+		loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
+        // loadTexture("models/Tiles/Tiles_057_normal", "normalTexture"),
+        loadTexture("models/Tiles/Tiles_057_ambientOcclusion.png", "material.specular"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -277,7 +295,7 @@ Scene lifeOfPi() {
 	scene.objects.push_back(std::move(boat));
 
 	std::vector<Texture> textures = {
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "baseTexture"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -447,18 +465,15 @@ int main() {
     // From now on, framebuffer will handle clearing and setting
     // the draw buffer.
     ShaderProgram fbs = framebufferShader();
-    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs);
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs, true);
     fbs.activate();
     fbs.setUniform("screenTexture", 0);
-
-	// Set up the view and projection matrices.
 
 	// Ready, set, go!
 	bool running = true;
 	sf::Clock c;
     sf::Clock deltaClock;
 	auto last = c.getElapsedTime();
-
     float dt = 0.f;
 
 	// Start the animators.
@@ -537,7 +552,7 @@ int main() {
 #endif
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
-		// std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
+		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
 

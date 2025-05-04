@@ -22,7 +22,7 @@ class Framebuffer {
 
         ShaderProgram program;
 
-        Framebuffer(uint32_t width, uint32_t height, ShaderProgram p) {
+        Framebuffer(uint32_t width, uint32_t height, ShaderProgram p, bool enableCull = false, bool enableStencil = false) {
 
             // sets up VAO and VBO that wil fit the whole screen.
             glGenVertexArrays(1, &screenVAO);
@@ -67,6 +67,8 @@ class Framebuffer {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             program = p;
+            cullEnabled = enableCull;
+            stencilEnabled = enableStencil;
         };
 
         ~Framebuffer() {
@@ -96,8 +98,12 @@ class Framebuffer {
             // binds the framebuffer for drawing
             glBindFramebuffer(GL_FRAMEBUFFER, fboId);
             glEnable(GL_DEPTH_TEST);
-            glEnable(GL_STENCIL_TEST);
-            glEnable(GL_CULL_FACE);
+
+            if (stencilEnabled)
+                glEnable(GL_STENCIL_TEST);
+
+            if (cullEnabled)
+                glEnable(GL_CULL_FACE);
 
             Clear();
         }
@@ -106,8 +112,12 @@ class Framebuffer {
             // binds view buffer for drawing
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDisable(GL_DEPTH_TEST);
+
+            if (stencilEnabled)
             glDisable(GL_STENCIL_TEST);
-            glDisable(GL_CULL_FACE);
+
+            if (cullEnabled)
+                glDisable(GL_CULL_FACE);
 
             Clear(1.0f, 1.0f, 1.0f);
 
@@ -120,4 +130,7 @@ class Framebuffer {
     private:
         uint32_t screenVAO;
         uint32_t screenVBO;
+
+        bool cullEnabled;
+        bool stencilEnabled;
 };
