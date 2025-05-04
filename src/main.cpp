@@ -26,12 +26,25 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "RotationAnimation.h"
 #include "TranslationAnimation.h"
 #include "PauseAnimation.h"
-// #include "BezierTranslationAnimation.h"
+#include "BezierTranslationAnimation.h"
 
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#define SFML_V2
+// #define SFML_V2
+
+sf::Vector2<int> winSize = {1200, 800};
+
+float quadVertices[] = {
+  // positions   // texCoords
+    1.0f, -1.0f,  1.0f, 0.0f,
+   -1.0f, -1.0f,  0.0f, 0.0f,
+   -1.0f,  1.0f,  0.0f, 1.0f,
+
+    1.0f,  1.0f,  1.0f, 1.0f,
+    1.0f, -1.0f,  1.0f, 0.0f,
+   -1.0f,  1.0f,  0.0f, 1.0f
+};
 
 struct DirLight {
     bool display = true;
@@ -98,6 +111,18 @@ ShaderProgram toonLightingShader() {
 		exit(1);
 	}
 	return shader;
+}
+
+ShaderProgram framebufferShader() {
+    ShaderProgram shader;
+    try {
+        shader.load("shaders/fb_screen.vert", "shaders/fb_screen.frag");
+    }
+    catch (std::runtime_error& e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+        exit(1);
+    }
+    return shader;
 }
 
 /**
@@ -390,7 +415,6 @@ void GLSetCameraUniform(Scene& scene) {
 }
 
 int main() {
-
 	std::cout << std::filesystem::current_path() << std::endl;
 
 	// Initialize the window and OpenGL.
@@ -401,14 +425,58 @@ int main() {
 	settings.minorVersion = 3;
 #ifdef SFML_V2
 	settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
-    sf::Window window(sf::VideoMode{ 1200, 800 }, "Modern OpenGL v2", sf::Style::Resize | sf::Style::Close, settings);
+    sf::Window window(sf::VideoMode{ winSize.x, winSize.y }, "Modern OpenGL v2", sf::Style::Resize | sf::Style::Close, settings);
 #else
 	settings.antiAliasingLevel = 2;
-	sf::Window window(sf::VideoMode({ 1200, 800 }), "Modern OpenGL v3", sf::State::Windowed, settings);
+	sf::Window window(sf::VideoMode({ winSize.x, winSize.y }), "Modern OpenGL v3", sf::State::Windowed, settings);
 #endif
 	gladLoadGL();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	// glEnable(GL_CULL_FACE);
+    glViewport(0, 0, winSize.x, winSize.y);
+
+    // screen quad VAO
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+
+    // framebuffer
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    unsigned int framebufferTexture;
+    glGenTextures(1, &framebufferTexture);
+    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, winSize.x, winSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, winSize.x, winSize.y);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    // glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "ERROR: Framebuffer incomplete!" << std::endl;
+    }
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // glViewport(0, 0, window.getSize().x, window.getSize().y);
+
 
 	// Inintialize scene objects.
 	auto myScene = lifeOfPi();
@@ -417,6 +485,11 @@ int main() {
 
 	// Activate the shader program.
 	myScene.program.activate();
+
+    // also initialize and activate frambuffer's shader.
+    ShaderProgram fbProgram = framebufferShader();
+    fbProgram.activate();
+    fbProgram.setUniform("screenTexture", 0);
 
 	// Set up the view and projection matrices.
 
@@ -440,7 +513,7 @@ int main() {
 
     // center the mouse initially.
     sf::Vector2<int> lastPosition = {};
-    sf::Vector2<int> mousePosition = {(int)window.getSize().x / 2, (int)window.getSize().y / 2};
+    sf::Vector2<int> mousePosition = {(int)winSize.x / 2, (int)winSize.y / 2};
     sf::Mouse::setPosition(mousePosition, window);
     window.setMouseCursorVisible(false);
     window.setMouseCursorGrabbed(true);
@@ -458,6 +531,8 @@ int main() {
                 window.setSize({ ev.size.width, ev.size.height });
                 glViewport(0, 0, ev.size.width, ev.size.height);
 
+                winSize.x = ev.size.width;
+                winSize.y = ev.size.height;
                 myScene.camera.RequestPerspective();
             }
             else if (ev.type == sf::Event::MouseMoved) {
@@ -481,6 +556,9 @@ int main() {
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
                 window.setSize(resized->size);
                 glViewport(0, 0, resized->size.x, resized->size.y);
+
+                winSize.x = resized->size.x;
+                winSize.y = resized->size.y;
                 myScene.camera.RequestPerspective();
             }
             else if (ev->is<sf::Event::MouseMoved>()) {
@@ -561,23 +639,47 @@ int main() {
             }
         }
 
-        myScene.camera.update((float)window.getSize().x, (float)window.getSize().y, dt);
-        GLSetCameraUniform(myScene);
+        myScene.camera.update((float)winSize.x, (float)winSize.y, dt);
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {
 			anim.tick(diff.asSeconds());
 		}
 
-		// Clear the OpenGL "context".
+        // === RENDER ===
+
+        // render scene to texture buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+
+        myScene.program.activate();
+
+        GLSetCameraUniform(myScene);
 		// Render the scene objects.
 		for (auto& o : myScene.objects) {
 			o.render(myScene.program);
 		}
-		window.display();
 
+        // render the texture to screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        fbProgram.activate();
+        glBindVertexArray(quadVAO);
+        glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		window.display();
 	}
     window.close();
+
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &quadVBO);
+    glDeleteRenderbuffers(1, &rbo);
+    glDeleteFramebuffers(1, &framebuffer);
 	return 0;
 }
