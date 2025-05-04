@@ -21,6 +21,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include "Object3D.h"
 #include "ShaderProgram.h"
 #include "Camera.h"
+#include "Framebuffer.h"
 
 #include "Animator.h"
 #include "RotationAnimation.h"
@@ -31,20 +32,9 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-// #define SFML_V2
+#define SFML_V2
 
-sf::Vector2<int> winSize = {1200, 800};
-
-float quadVertices[] = {
-  // positions   // texCoords
-    1.0f, -1.0f,  1.0f, 0.0f,
-   -1.0f, -1.0f,  0.0f, 0.0f,
-   -1.0f,  1.0f,  0.0f, 1.0f,
-
-    1.0f,  1.0f,  1.0f, 1.0f,
-    1.0f, -1.0f,  1.0f, 0.0f,
-   -1.0f,  1.0f,  0.0f, 1.0f
-};
+sf::Vector2<uint32_t> winSize = {1200, 800};
 
 struct DirLight {
     bool display = true;
@@ -116,7 +106,7 @@ ShaderProgram toonLightingShader() {
 ShaderProgram framebufferShader() {
     ShaderProgram shader;
     try {
-        shader.load("shaders/fb_screen.vert", "shaders/fb_screen.frag");
+        shader.load("shaders/post_process/simple_framebuffer.vert", "shaders/post_process/simple_framebuffer.frag");
     }
     catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -414,6 +404,7 @@ void GLSetCameraUniform(Scene& scene) {
     }
 }
 
+
 int main() {
 	std::cout << std::filesystem::current_path() << std::endl;
 
@@ -431,52 +422,19 @@ int main() {
 	sf::Window window(sf::VideoMode({ winSize.x, winSize.y }), "Modern OpenGL v3", sf::State::Windowed, settings);
 #endif
 	gladLoadGL();
+
+    // === GL GLOBAL SETS ===
+    // DEPTH TEST
 	glEnable(GL_DEPTH_TEST);
-	// glEnable(GL_CULL_FACE);
-    glViewport(0, 0, winSize.x, winSize.y);
 
-    // screen quad VAO
-    unsigned int quadVAO, quadVBO;
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    // STENCIL TEST
+    /*glEnable(GL_STENCIL_TEST);*/
 
+    // FACE CULLING
+	glEnable(GL_CULL_FACE);
 
-    // framebuffer
-    unsigned int framebuffer;
-    glGenFramebuffers(1, &framebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-    unsigned int framebufferTexture;
-    glGenTextures(1, &framebufferTexture);
-    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, winSize.x, winSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
-
-    unsigned int rbo;
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, winSize.x, winSize.y);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-    // glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cout << "ERROR: Framebuffer incomplete!" << std::endl;
-    }
-    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // glViewport(0, 0, window.getSize().x, window.getSize().y);
-
+    // NOTE(liam): could mess up models where front and back face must be visible
+    glCullFace(GL_BACK);
 
 	// Inintialize scene objects.
 	auto myScene = lifeOfPi();
@@ -486,12 +444,12 @@ int main() {
 	// Activate the shader program.
 	myScene.program.activate();
 
-    // also initialize and activate frambuffer's shader.
-    ShaderProgram fbProgram = framebufferShader();
-    fbProgram.activate();
-    fbProgram.setUniform("screenTexture", 0);
-
-	// Set up the view and projection matrices.
+    // Activate and initialize framebuffer's shader.
+    // From now on, framebuffer will handle clearing and setting
+    // the draw buffer.
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, framebufferShader());
+    fb.program.activate();
+    fb.program.setUniform("screenTexture", 0);
 
 	// Ready, set, go!
 	bool running = true;
@@ -647,13 +605,16 @@ int main() {
 		}
 
         // === RENDER ===
+        // sends render calls to Texture map.
+        // also clears the texture
+        fb.RenderOnTexture();
+
+        // sets what to do on fail; must be done every frame
+        /*glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);*/
+        // disables writing to stencil buffer by default
+        /*glStencilMask(0x00);*/
 
         // render scene to texture buffer
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-
         myScene.program.activate();
 
         GLSetCameraUniform(myScene);
@@ -662,24 +623,34 @@ int main() {
 			o.render(myScene.program);
 		}
 
-        // render the texture to screen
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
+        // enables writing to stencil buffer
+        /*glStencilFunc(GL_ALWAYS, 1, 0xFF);*/
+        /*glStencilMask(0xFF);*/
 
-        fbProgram.activate();
-        glBindVertexArray(quadVAO);
-        glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // TODO(liam)
+        // -- draw object
+
+        // func makes sure to draw only on parts of container
+        // not equal to 1 (0xFF).
+        // Depth testing is also disabled to prevent 'borders'
+        // from being overwritten by other objects (i.e, floor, etc.)
+        /*glStencilFunc(GL_NOTEQUAL, 1, 0xFF);*/
+        /*glStencilMask(0x00);*/
+        /*glDisable(GL_DEPTH_TEST);*/
+
+        // TODO(liam)
+        // -- activate outline shader
+        // -- draw scaled object
+
+        /*glStencilMask(0xFF);*/
+        /*glStencilFunc(GL_ALWAYS, 1, 0xFF);*/
+        /*glEnable(GL_DEPTH_TEST);*/
+
+        // sends texture map to view buffer.
+        fb.TextureToScreen();
 
 		window.display();
 	}
     window.close();
-
-    glDeleteVertexArrays(1, &quadVAO);
-    glDeleteBuffers(1, &quadVBO);
-    glDeleteRenderbuffers(1, &rbo);
-    glDeleteFramebuffers(1, &framebuffer);
 	return 0;
 }
