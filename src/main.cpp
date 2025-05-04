@@ -31,7 +31,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-// #define SFML_V2
+#define SFML_V2
 
 struct DirLight {
     bool display = true;
@@ -463,7 +463,13 @@ int main() {
                 lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
 
-                myScene.camera.ProcessMouseMove(mousePosition.x - lastPosition.x, lastPosition.y - mousePosition.y);
+                float mX = mousePosition.x - lastPosition.x, mY = lastPosition.y - mousePosition.y;
+                myScene.camera.ProcessMouseMove(mX, mY);
+            }
+            else if (ev.type == sf::Event::MouseWheelScrolled) {
+                if (ev.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel) {
+                    myScene.camera.ProcessMouseScroll(ev.mouseWheelScroll.delta);
+                }
             }
         }
 #else
@@ -480,7 +486,13 @@ int main() {
                 lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
 
-                myScene.camera.ProcessMouseMove(mousePosition.x - lastPosition.x, lastPosition.y - mousePosition.y);
+                float mX = mousePosition.x - lastPosition.x, mY = lastPosition.y - mousePosition.y;
+                myScene.camera.ProcessMouseMove(mX, mY);
+            }
+            else if (const auto* msScrolled = ev->getIf<sf::Event::MouseWheelScrolled>()) {
+                if (msScrolled->wheel == sf::Mouse::Wheel::Vertical) {
+                    myScene.camera.ProcessMouseScroll(msScrolled->delta);
+                }
             }
 		}
 #endif
@@ -491,10 +503,17 @@ int main() {
 
 
         // === INPUT ===
+
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
             if (!targetLockCooldown) {
-                targetLock = !targetLock;
+                if (!targetLock) {
+                    myScene.camera.SetTarget(myScene.objects[0].getPosition());
+                }
+                else {
+                    myScene.camera.DropTarget();
+                }
 
+                targetLock = !targetLock;
                 targetLockCooldown = 1.f;
             }
         }
@@ -539,13 +558,6 @@ int main() {
             if (targetLockCooldown <= 0.0) {
                 targetLockCooldown = 0.0;
             }
-        }
-
-        if (targetLock) {
-            myScene.camera.SetTarget(myScene.objects[0].getPosition());
-        }
-        else if (!targetLock) {
-            myScene.camera.DropTarget();
         }
 
         myScene.camera.update((float)window.getSize().x, (float)window.getSize().y, dt);

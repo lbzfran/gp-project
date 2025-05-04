@@ -130,8 +130,10 @@ class Camera {
     void SetTarget(glm::vec3 t) {
         isTargetting = true;
         target = t;
+        zoom = ZOOM;
 
         RequestView();
+        RequestPerspective();
     }
 
     void DropTarget() {
