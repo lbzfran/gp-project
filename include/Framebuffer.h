@@ -22,7 +22,7 @@ class Framebuffer {
 
         ShaderProgram program;
 
-        Framebuffer(float width, float height, ShaderProgram p) {
+        Framebuffer(uint32_t width, uint32_t height, ShaderProgram p) {
 
             // sets up VAO and VBO that wil fit the whole screen.
             glGenVertexArrays(1, &screenVAO);
@@ -96,6 +96,8 @@ class Framebuffer {
             // binds the framebuffer for drawing
             glBindFramebuffer(GL_FRAMEBUFFER, fboId);
             glEnable(GL_DEPTH_TEST);
+            glEnable(GL_STENCIL_TEST);
+            glEnable(GL_CULL_FACE);
 
             Clear();
         }
@@ -104,6 +106,8 @@ class Framebuffer {
             // binds view buffer for drawing
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDisable(GL_DEPTH_TEST);
+            glDisable(GL_STENCIL_TEST);
+            glDisable(GL_CULL_FACE);
 
             Clear(1.0f, 1.0f, 1.0f);
 

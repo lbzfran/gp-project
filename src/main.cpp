@@ -432,7 +432,6 @@ int main() {
 
     // FACE CULLING
 	glEnable(GL_CULL_FACE);
-
     // NOTE(liam): could mess up models where front and back face must be visible
     glCullFace(GL_BACK);
 
@@ -447,9 +446,12 @@ int main() {
     // Activate and initialize framebuffer's shader.
     // From now on, framebuffer will handle clearing and setting
     // the draw buffer.
-    Framebuffer fb = Framebuffer(winSize.x, winSize.y, framebufferShader());
-    fb.program.activate();
-    fb.program.setUniform("screenTexture", 0);
+    ShaderProgram fbs = framebufferShader();
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs);
+    fbs.activate();
+    fbs.setUniform("screenTexture", 0);
+
+	// Set up the view and projection matrices.
 
 	// Ready, set, go!
 	bool running = true;
@@ -606,7 +608,8 @@ int main() {
 
         // === RENDER ===
         // sends render calls to Texture map.
-        // also clears the texture
+        // also clears the textures
+        // and enables certain tests automatically
         fb.RenderOnTexture();
 
         // sets what to do on fail; must be done every frame
