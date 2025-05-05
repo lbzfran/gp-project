@@ -494,6 +494,8 @@ int main() {
     sf::Vector2<int> lastPosition = {};
     sf::Vector2<int> mousePosition = {(int)winSize.x / 2, (int)winSize.y / 2};
     sf::Mouse::setPosition(mousePosition, window);
+
+    bool lockCursor = true;
     window.setMouseCursorVisible(false);
     window.setMouseCursorGrabbed(true);
     // window.setKeyRepeatEnabled(true);
@@ -503,7 +505,7 @@ int main() {
 #ifdef SFML_V2
         sf::Event ev;
         while (window.pollEvent(ev)) {
-			if (ev.type == sf::Event::Closed || (ev.type == sf::Event::KeyPressed && ev.key.code == sf::Keyboard::Key::Escape)) {
+			if (ev.type == sf::Event::Closed) {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
@@ -530,7 +532,7 @@ int main() {
         }
 #else
         while (const std::optional ev = window.pollEvent()) {
-            if (ev->getIf<sf::Event::Closed>() || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
+            if (ev->getIf<sf::Event::Closed>()) {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
@@ -561,6 +563,9 @@ int main() {
 		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
+        if (lockCursor) {
+            sf::Mouse::setPosition(sf::Vector2<int>(winSize.x / 2, winSize.y / 2), window);
+        }
 
         // === INPUT ===
 
@@ -575,6 +580,20 @@ int main() {
 
                 targetLock = !targetLock;
                 targetLockCooldown = 1.f;
+            }
+        }
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+            if (!lockCursor) {
+                lockCursor = !lockCursor;
+            }
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
+            if (lockCursor) {
+                lockCursor = !lockCursor;
+            }
+            else {
+                running = false;
             }
         }
 
