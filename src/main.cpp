@@ -32,7 +32,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#define SFML_V2
+// #define SFML_V2
 
 sf::Vector2<uint32_t> winSize = {1200, 800};
 
@@ -466,12 +466,14 @@ int main() {
 	// Activate the shader program.
 	myScene.program.activate();
 
+    ShaderProgram fbs = framebufferShader();
+    fbs.activate();
+    fbs.setUniform("screenTexture", 0);
     // Activate and initialize framebuffer's shader.
     // From now on, framebuffer will handle clearing and setting
     // the draw buffer.
-    Framebuffer fb = Framebuffer(winSize.x, winSize.y, framebufferShader(), true);
-    fb.program.activate();
-    fb.program.setUniform("screenTexture", 0);
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+
 
 	// Ready, set, go!
 	bool running = true;
@@ -491,9 +493,9 @@ int main() {
     bool moveHeld = false;
 
     // center the mouse initially.
-    sf::Vector2<int> lastPosition = {};
-    sf::Vector2<int> mousePosition = {(int)winSize.x / 2, (int)winSize.y / 2};
-    sf::Mouse::setPosition(mousePosition, window);
+    sf::Vector2<int> centerPosition = {(int)winSize.x / 2, (int)winSize.y / 2};
+    sf::Vector2<int> mousePosition = {};
+    sf::Mouse::setPosition(centerPosition, window);
 
     bool lockCursor = true;
     window.setMouseCursorVisible(false);
@@ -509,19 +511,24 @@ int main() {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
-                winSize.x = ev.size.width;
-                winSize.y = ev.size.height;
+                winSize.x = static_cast<uint32_t>(ev.size.width);
+                winSize.y = static_cast<uint32_t>(ev.size.height);
+
+                centerPosition.x = static_cast<int>(winSize.x) / 2;
+                centerPosition.y = static_cast<int>(winSize.y) / 2;
 
                 window.setSize({ winSize.x, winSize.y });
                 glViewport(0, 0, winSize.x, winSize.y);
 
+                fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+
                 myScene.camera.RequestPerspective();
             }
             else if (ev.type == sf::Event::MouseMoved) {
-                lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
 
-                float mX = mousePosition.x - lastPosition.x, mY = lastPosition.y - mousePosition.y;
+                float mX = mousePosition.x - centerPosition.x;
+                float mY = centerPosition.y - mousePosition.y;
                 myScene.camera.ProcessMouseMove(mX, mY);
             }
             else if (ev.type == sf::Event::MouseWheelScrolled) {
@@ -536,19 +543,24 @@ int main() {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
-                winSize.x = resized->size.x;
-                winSize.y = resized->size.y;
+                winSize.x = static_cast<uint32_t>(resized->size.x);
+                winSize.y = static_cast<uint32_t>(resized->size.y);
+
+                centerPosition.x = static_cast<int>(winSize.x) / 2;
+                centerPosition.y = static_cast<int>(winSize.y) / 2;
 
                 window.setSize(winSize);
                 glViewport(0, 0, winSize.x, winSize.y);
 
+                fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+
                 myScene.camera.RequestPerspective();
             }
             else if (ev->is<sf::Event::MouseMoved>()) {
-                lastPosition = mousePosition;
                 mousePosition = sf::Mouse::getPosition(window);
 
-                float mX = mousePosition.x - lastPosition.x, mY = lastPosition.y - mousePosition.y;
+                float mX = mousePosition.x - centerPosition.x;
+                float mY = centerPosition.y - mousePosition.y;
                 myScene.camera.ProcessMouseMove(mX, mY);
             }
             else if (const auto* msScrolled = ev->getIf<sf::Event::MouseWheelScrolled>()) {
@@ -582,18 +594,24 @@ int main() {
                 targetLockCooldown = 1.f;
             }
         }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) && !lockCursor) {
+            running = false;
+        }
 
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
             if (!lockCursor) {
                 lockCursor = !lockCursor;
-            }
-        }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
-            if (lockCursor) {
-                lockCursor = !lockCursor;
+                window.setMouseCursorGrabbed(true);
+                window.setMouseCursorVisible(false);
+
+                myScene.camera.ToggleFocus();
             }
             else {
-                running = false;
+                lockCursor = !lockCursor;
+                window.setMouseCursorGrabbed(false);
+                window.setMouseCursorVisible(true);
+
+                myScene.camera.ToggleFocus();
             }
         }
 
@@ -631,6 +649,7 @@ int main() {
         }
 
         // === UPDATE ===
+
 
         if (targetLockCooldown > 0.0) {
             targetLockCooldown -= dt;

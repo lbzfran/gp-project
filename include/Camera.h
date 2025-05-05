@@ -29,6 +29,8 @@ class Camera {
         glm::vec3 up;
         glm::vec3 right;
 
+        bool isFocused;
+
         bool isTargetting;
         glm::vec3 target;
         glm::vec3 hover;
@@ -52,6 +54,8 @@ class Camera {
         up = worldUp;
         yaw = y;
         pitch = p;
+
+        isFocused = true;
         isTargetting = false;
 
         UpdateVectors();
@@ -86,7 +90,7 @@ class Camera {
 
     void ProcessMouseMove(float xOff, float yOff, bool limitPitch = true) {
         if (xOff || yOff) {
-            if (!isTargetting) {
+            if (!isTargetting && isFocused) {
                 xOff *= mouseSensitivity;
                 yOff *= mouseSensitivity;
 
@@ -140,6 +144,10 @@ class Camera {
         isTargetting = false;
 
         RequestView();
+    }
+
+    void ToggleFocus() {
+        isFocused = !isFocused;
     }
 
     void RequestView() {
