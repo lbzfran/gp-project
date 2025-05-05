@@ -133,14 +133,16 @@ Mesh3D fromAssimpMesh(const aiMesh* mesh, const aiScene* scene, const std::files
 Object3D assimpLoad(const std::string& path, bool flipTextureCoords) {
 	Assimp::Importer importer;
 
-	auto options = aiProcessPreset_TargetRealtime_MaxQuality;
+	auto options = aiProcessPreset_TargetRealtime_MaxQuality |
+        aiProcess_Triangulate |
+        aiProcess_GenNormals;
 	if (flipTextureCoords) {
 		options |= aiProcess_FlipUVs;
 	}
 	const aiScene* scene = importer.ReadFile(path, options);
 
 	// If the import failed, report it
-	if (nullptr == scene) {
+	if (nullptr == scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 		auto* error = importer.GetErrorString();
 		std::cerr << "Error loading assimp file: " + std::string(error) << std::endl;
 		throw std::runtime_error("Error loading assimp file: " + std::string(error));

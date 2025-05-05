@@ -20,7 +20,7 @@ Object3D::Object3D(std::vector<Mesh3D>&& meshes)
 
 Object3D::Object3D(std::vector<Mesh3D>&& meshes, const glm::mat4& baseTransform)
 	: m_meshes(meshes), m_position(), m_orientation(), m_scale(1.0),
-	m_center(), m_shininess(4), m_baseTransform(baseTransform)
+	m_center(), m_velocity(), m_acceleration(), m_rotVelocity(), m_rotAcceleration(), m_shininess(4), m_baseTransform(baseTransform)
 {
 }
 
@@ -45,6 +45,14 @@ const glm::vec3& Object3D::getCenter() const {
 
 const std::string& Object3D::getName() const {
 	return m_name;
+}
+
+const glm::vec3& Object3D::getAcceleration() const {
+    return m_acceleration;
+}
+
+const glm::vec3& Object3D::getRotAcceleration() const {
+    return m_rotAcceleration;
 }
 
 const float Object3D::getShininess() const {
@@ -92,6 +100,14 @@ void Object3D::setName(const std::string& name) {
 	m_name = name;
 }
 
+void Object3D::setAcceleration(const glm::vec3& accel) {
+    m_acceleration = accel;
+}
+
+void Object3D::setRotAcceleration(const glm::vec3& accel) {
+    m_rotAcceleration = accel;
+}
+
 /*void Object3D::setMaterial(const glm::vec4& material) {*/
 /*	m_material = material;*/
 /*}*/
@@ -114,6 +130,18 @@ void Object3D::grow(const glm::vec3& growth) {
 
 void Object3D::addChild(Object3D&& child) {
 	m_children.emplace_back(child);
+}
+
+void Object3D::tick(float_t dt) {
+    m_position += m_velocity * dt;
+    m_velocity += m_acceleration * dt;
+
+    m_orientation += m_rotVelocity * dt;
+    m_rotVelocity += m_rotAcceleration * dt;
+
+    for (auto& c : m_children) {
+        c.tick(dt);
+    }
 }
 
 void Object3D::render(ShaderProgram& shaderProgram) const {

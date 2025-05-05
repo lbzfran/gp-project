@@ -32,7 +32,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-// #define SFML_V2
+#define SFML_V2
 
 sf::Vector2<uint32_t> winSize = {1200, 800};
 
@@ -41,8 +41,8 @@ struct DirLight {
 
     glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
 
-    glm::vec3 ambient{ 0.0f, 0.0f, 0.0f };
-    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
     glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
@@ -89,9 +89,6 @@ struct Scene {
     SpotLight slight;
 };
 
-/**
- * @brief Constructs a shader program that applies the Cell Shading model.
- */
 ShaderProgram toonLightingShader() {
 	ShaderProgram shader;
 	try {
@@ -104,10 +101,22 @@ ShaderProgram toonLightingShader() {
 	return shader;
 }
 
-ShaderProgram framebufferShader() {
+ShaderProgram FB_simpleShader() {
     ShaderProgram shader;
     try {
         shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_simple.frag");
+    }
+    catch (std::runtime_error& e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+        exit(1);
+    }
+    return shader;
+}
+
+ShaderProgram FB_sharpenShader() {
+    ShaderProgram shader;
+    try {
+        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_sharpen.frag");
     }
     catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
@@ -167,6 +176,34 @@ Texture loadTexture(const std::filesystem::path& path, const std::string& sample
 	return Texture::loadImage(i, samplerName);
 }
 
+uint32_t loadCubemap(vector<std::string> faces) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++) {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else {
+            std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
 /*****************************************************************************************
 *  DEMONSTRATION SCENES
 *****************************************************************************************/
@@ -209,6 +246,7 @@ Scene marbleSquare() {
 
 	std::vector<Texture> textures = {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -225,7 +263,7 @@ Scene testSquare() {
 
 	std::vector<Texture> textures = {
 		loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
-        // loadTexture("models/Tiles/Tiles_057_normal", "normalTexture"),
+		loadTexture("models/Tiles/Tiles_057_normal.png", "material.normal"),
         loadTexture("models/Tiles/Tiles_057_ambientOcclusion.png", "material.specular"),
 	};
 	auto mesh = Mesh3D::square(textures);
@@ -245,6 +283,9 @@ Scene cube() {
 	Scene scene{ toonLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
+
+	Texture tilemap = loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse");
+    /*cube.addTexture(tilemap);*/
 
 	scene.objects.push_back(std::move(cube));
 
@@ -297,8 +338,8 @@ Scene lifeOfPi() {
 
 	std::vector<Texture> textures = {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
+		/*loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),*/
+		/*loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),*/
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -334,12 +375,13 @@ Scene lifeOfPi() {
 	return scene;
 }
 
-Scene Classroom() {
+Scene Room() {
 	Scene scene{ toonLightingShader() };
 
-    scene.plight.position = {2.f, 2.f, -3.f};
+    /*scene.plight.position = {2.f, 2.f, -3.f};*/
 
-	auto room = assimpLoad("models/classroom/scene.gltf", true);
+	auto room = assimpLoad("models/cube.obj", true);
+
 	room.grow(glm::vec3(0.5f));
 	/*lady.grow(glm::vec3(0.25));*/
 	/*lady.move(glm::vec3(0, -25, -50));*/
@@ -459,14 +501,14 @@ int main() {
     glCullFace(GL_BACK);
 
 	// Inintialize scene objects.
-	auto myScene = cube();
+	auto myScene = marbleSquare();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 
 	// Activate the shader program.
 	myScene.program.activate();
 
-    ShaderProgram fbs = framebufferShader();
+    ShaderProgram fbs = FB_simpleShader();
     fbs.activate();
     fbs.setUniform("screenTexture", 0);
     // Activate and initialize framebuffer's shader.
@@ -478,9 +520,7 @@ int main() {
 	// Ready, set, go!
 	bool running = true;
 	sf::Clock c;
-    sf::Clock deltaClock;
 	auto last = c.getElapsedTime();
-    float dt = 0.f;
 
 	// Start the animators.
 	for (auto& anim : myScene.animators) {
@@ -503,7 +543,6 @@ int main() {
     // window.setKeyRepeatEnabled(true);
 
 	while (running) {
-        dt = deltaClock.restart().asSeconds();
 #ifdef SFML_V2
         sf::Event ev;
         while (window.pollEvent(ev)) {
@@ -520,7 +559,7 @@ int main() {
                 window.setSize({ winSize.x, winSize.y });
                 glViewport(0, 0, winSize.x, winSize.y);
 
-                fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+                /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
             }
@@ -552,7 +591,7 @@ int main() {
                 window.setSize(winSize);
                 glViewport(0, 0, winSize.x, winSize.y);
 
-                fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+                /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
             }
@@ -572,6 +611,7 @@ int main() {
 #endif
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
+        float dt = diff.asSeconds();
 		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
@@ -662,7 +702,7 @@ int main() {
 
 		// Update the scene.
 		for (auto& anim : myScene.animators) {
-			anim.tick(diff.asSeconds());
+			anim.tick(dt);
 		}
 
         // === RENDER ===
@@ -679,11 +719,13 @@ int main() {
         // render scene to texture buffer
         myScene.program.activate();
 
+        /*glCullFace(GL_FRONT);*/
         GLSetCameraUniform(myScene);
 		// Render the scene objects.
 		for (auto& o : myScene.objects) {
 			o.render(myScene.program);
 		}
+        /*glCullFace(GL_BACK);*/
 
         // enables writing to stencil buffer
         /*glStencilFunc(GL_ALWAYS, 1, 0xFF);*/

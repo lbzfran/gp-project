@@ -32,11 +32,11 @@ Mesh3D::Mesh3D(std::vector<Vertex3D>&& vertices, std::vector<uint32_t>&& faces, 
 	glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex3D), (void*)12);
 	glEnableVertexAttribArray(1);
 
-	// Inform OpenGL how to interpret the buffer: ... the 2 floats for texture coordinate.
+	// Inform OpenGL how to interpret the buffer: ... the 2 floats for texture coordinate...
 	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex3D), (void*)24);
 	glEnableVertexAttribArray(2);
 
-    // TODO(liam): add tangent vector
+	// Inform OpenGL how to interpret the buffer: ... the 3 floats for tangent vector.
 	glVertexAttribPointer(3, 3, GL_FLOAT, false, sizeof(Vertex3D), (void*)32);
 	glEnableVertexAttribArray(3);
 
