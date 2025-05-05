@@ -32,18 +32,18 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-#define SFML_V2
+// #define SFML_V2
 
 sf::Vector2<uint32_t> winSize = {1200, 800};
 
 struct DirLight {
     bool display = true;
 
-    glm::vec3 direction{ 1.0f, -1.0f, -1.0f };
+    glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.1f, 0.1f, 0.1f };
-    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
 struct PointLight {
@@ -55,8 +55,8 @@ struct PointLight {
     float linear = 0.14f;
     float quadratic = 0.07f;
 
-    glm::vec3 ambient{ 0.0f, 0.0f, 0.2f };
-    glm::vec3 diffuse{ 0.0f, 0.4f, 0.0f };
+    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
     glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
@@ -65,15 +65,16 @@ struct SpotLight {
 
     glm::vec3 position{ 0.f, 1.f, 0.f };
     glm::vec3 direction{ 0.f, -1.f, 0.f };
-    float cutOff = 25.f;
+    float cutOff = 7.5f;
+    float outerCutOff = 10.0f;
 
     float constant = 1.0f;
     float linear = 0.35f;
     float quadratic = 0.44f;
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.0f, 0.4f };
-    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
 struct Scene {
@@ -296,6 +297,8 @@ Scene lifeOfPi() {
 
 	std::vector<Texture> textures = {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
+		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
+		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -439,6 +442,8 @@ int main() {
 	settings.antiAliasingLevel = 2;
 	sf::Window window(sf::VideoMode({ winSize.x, winSize.y }), "Modern OpenGL v3", sf::State::Windowed, settings);
 #endif
+    winSize.x = window.getSize().x;
+    winSize.y = window.getSize().y;
 	gladLoadGL();
 
     // === GL GLOBAL SETS ===
@@ -464,10 +469,9 @@ int main() {
     // Activate and initialize framebuffer's shader.
     // From now on, framebuffer will handle clearing and setting
     // the draw buffer.
-    ShaderProgram fbs = framebufferShader();
-    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs, true);
-    fbs.activate();
-    fbs.setUniform("screenTexture", 0);
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, framebufferShader(), true);
+    fb.program.activate();
+    fb.program.setUniform("screenTexture", 0);
 
 	// Ready, set, go!
 	bool running = true;
@@ -503,11 +507,12 @@ int main() {
 				running = false;
 			}
             else if (ev.type == sf::Event::Resized) {
-                window.setSize({ ev.size.width, ev.size.height });
-                glViewport(0, 0, ev.size.width, ev.size.height);
-
                 winSize.x = ev.size.width;
                 winSize.y = ev.size.height;
+
+                window.setSize({ winSize.x, winSize.y });
+                glViewport(0, 0, winSize.x, winSize.y);
+
                 myScene.camera.RequestPerspective();
             }
             else if (ev.type == sf::Event::MouseMoved) {
@@ -529,11 +534,12 @@ int main() {
                 running = false;
             }
             else if (const auto* resized = ev->getIf<sf::Event::Resized>()) {
-                window.setSize(resized->size);
-                glViewport(0, 0, resized->size.x, resized->size.y);
-
                 winSize.x = resized->size.x;
                 winSize.y = resized->size.y;
+
+                window.setSize(winSize);
+                glViewport(0, 0, winSize.x, winSize.y);
+
                 myScene.camera.RequestPerspective();
             }
             else if (ev->is<sf::Event::MouseMoved>()) {

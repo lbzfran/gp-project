@@ -84,6 +84,34 @@ class Framebuffer {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
 
+        // idk if this is necessary
+        void Resize(float width, float height) {
+            if (rboId && textureId) {
+                glDeleteRenderbuffers(1, &rboId);
+                glDeleteTextures(1, &textureId);
+            }
+
+            // set up texture buffer
+            glGenTextures(1, &textureId);
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            // set up render buffer object
+            glGenRenderbuffers(1, &rboId);
+            glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboId);
+
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        }
+
         /*
          *
          * only for reference/debugging

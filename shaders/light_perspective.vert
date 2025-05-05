@@ -4,8 +4,8 @@
 layout (location=0) in vec3 vPosition;
 layout (location=1) in vec3 vNormal;
 layout (location=2) in vec2 vTexCoord;
-layout (location=3) in vec3 vTangent;
-layout (location=4) in vec3 vBitangent;
+// layout (location=3) in vec3 vTangent;
+// layout (location=4) in vec3 vBitangent;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -13,8 +13,8 @@ uniform mat4 model;
 
 out vec2 TexCoord;
 out vec3 FragWorldPos;
+out vec3 Normal;
 // out mat3 TBN;
-// out vec3 Normal;
 
 void main() {
     // Transform the vertex position from local space to clip space.
@@ -23,7 +23,7 @@ void main() {
     TexCoord = vTexCoord;
     // Transform the vertex normal from local space to world space, using the Normal matrix.
     mat3 normalMatrix = transpose(inverse(mat3(model)));
-    // Normal = mat3(normalMatrix) * vNormal;
+    Normal = normalMatrix * vNormal;
 
     FragWorldPos = vec3(model * vec4(vPosition, 1.0));
 
