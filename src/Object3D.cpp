@@ -20,7 +20,7 @@ Object3D::Object3D(std::vector<Mesh3D>&& meshes)
 
 Object3D::Object3D(std::vector<Mesh3D>&& meshes, const glm::mat4& baseTransform)
 	: m_meshes(meshes), m_position(), m_orientation(), m_scale(1.0),
-	m_center(), m_material(0.1, 1.0, 0.3, 4), m_baseTransform(baseTransform)
+	m_center(), m_shininess(4), m_baseTransform(baseTransform)
 {
 }
 
@@ -47,9 +47,13 @@ const std::string& Object3D::getName() const {
 	return m_name;
 }
 
-const glm::vec4& Object3D::getMaterial() const {
-	return m_material;
+const float Object3D::getShininess() const {
+    return m_shininess;
 }
+
+/*const glm::vec4& Object3D::getMaterial() const {*/
+/*	return m_material;*/
+/*}*/
 
 size_t Object3D::numberOfChildren() const {
 	return m_children.size();
@@ -88,8 +92,12 @@ void Object3D::setName(const std::string& name) {
 	m_name = name;
 }
 
-void Object3D::setMaterial(const glm::vec4& material) {
-	m_material = material;
+/*void Object3D::setMaterial(const glm::vec4& material) {*/
+/*	m_material = material;*/
+/*}*/
+
+void Object3D::setShininess(const float value) {
+    m_shininess = value;
 }
 
 void Object3D::move(const glm::vec3& offset) {
@@ -120,7 +128,9 @@ void Object3D::renderRecursive(ShaderProgram& shaderProgram, const glm::mat4& pa
 	// This object's true model matrix is the combination of its parent's matrix and the object's matrix.
 	glm::mat4 trueModel = parentMatrix * buildModelMatrix();
 	shaderProgram.setUniform("model", trueModel);
-    shaderProgram.setUniform("material", m_material);
+
+    shaderProgram.setUniform("material.shininess", m_shininess);
+    /*shaderProgram.setUniform("material", m_material);*/
 
 	// Render each mesh in the object.
 	for (auto& mesh : m_meshes) {

@@ -15,7 +15,8 @@ private:
 	glm::vec3 m_center;
 
 	// The object's material.
-	glm::vec4 m_material;
+	/*glm::vec4 m_material;*/
+    float m_shininess;
 
 	// The object's base transformation matrix.
 	glm::mat4 m_baseTransform;
@@ -40,7 +41,8 @@ public:
 	const glm::vec3& getScale() const;
 	const glm::vec3& getCenter() const;
 	const std::string& getName() const;
-	const glm::vec4& getMaterial() const;
+    const float getShininess() const;
+	/*const glm::vec4& getMaterial() const;*/
 
 	// Child management.
 	size_t numberOfChildren() const;
@@ -54,7 +56,8 @@ public:
 	void setScale(const glm::vec3& scale);
 	void setCenter(const glm::vec3& center);
 	void setName(const std::string& name);
-	void setMaterial(const glm::vec4& material);
+    void setShininess(const float value);
+	/*void setMaterial(const glm::vec4& material);*/
 
 	// Transformations.
 	void move(const glm::vec3& offset);

@@ -4,8 +4,7 @@
 layout (location=0) in vec3 vPosition;
 layout (location=1) in vec3 vNormal;
 layout (location=2) in vec2 vTexCoord;
-// layout (location=3) in vec3 vTangent;
-// layout (location=4) in vec3 vBitangent;
+layout (location=3) in vec3 vTangent;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -14,7 +13,7 @@ uniform mat4 model;
 out vec2 TexCoord;
 out vec3 FragWorldPos;
 out vec3 Normal;
-// out mat3 TBN;
+out mat3 TBN;
 
 void main() {
     // Transform the vertex position from local space to clip space.
@@ -28,10 +27,10 @@ void main() {
     FragWorldPos = vec3(model * vec4(vPosition, 1.0));
 
     // Gram-Schmidt optimization for TBN
-    // vec3 T = normalize(normalMatrix * vTangent);
-    // vec3 N = normalize(normalMatrix * vNormal);
-    // T = normalize(T - dot(T, N) * N);
-    // vec3 B = cross(N, T);
+    vec3 T = normalize(normalMatrix * vTangent);
+    vec3 N = normalize(normalMatrix * vNormal);
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
 
-    // TBN = mat3(T, B, N);
+    TBN = mat3(T, B, N);
 }

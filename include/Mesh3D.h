@@ -17,9 +17,11 @@ struct Vertex3D {
 	float u;
 	float v;
 
+    glm::vec3 tangent;
+
 	Vertex3D(float px, float py, float pz, float normX, float normY, float normZ,
 		float texU, float texV) :
-		x(px), y(py), z(pz), nx(normX), ny(normY), nz(normZ), u(texU), v(texV) {}
+		x(px), y(py), z(pz), nx(normX), ny(normY), nz(normZ), u(texU), v(texV), tangent(glm::vec3(0)) {}
 };
 
 class Mesh3D {

@@ -5,9 +5,47 @@
 #include <assimp/postprocess.h>
 #include <filesystem>
 #include <unordered_map>
+#include <glad/glad.h>
 
 const size_t FLOATS_PER_VERTEX = 3;
 const size_t VERTICES_PER_FACE = 3;
+
+void calculateTangents(std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices) {
+    for (uint32_t i = 0; i < indices.size(); i += 3) {
+        uint32_t i1 = indices[i];
+        uint32_t i2 = indices[i + 1];
+        uint32_t i3 = indices[i + 2];
+
+        glm::vec3 v1 = glm::vec3(vertices[i1].x, vertices[i1].y, vertices[i1].z);
+        glm::vec3 v2 = glm::vec3(vertices[i2].x, vertices[i2].y, vertices[i2].z);
+        glm::vec3 v3 = glm::vec3(vertices[i3].x, vertices[i3].y, vertices[i3].z);
+
+        glm::vec2 uv1 = glm::vec2(vertices[i1].u, vertices[i1].v);
+        glm::vec2 uv2 = glm::vec2(vertices[i2].u, vertices[i2].v);
+        glm::vec2 uv3 = glm::vec2(vertices[i3].u, vertices[i3].v);
+
+        glm::vec3 edge1 = v2 - v1;
+        glm::vec3 edge2 = v3 - v1;
+
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+
+        glm::vec3 tangent;
+        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        vertices[i1].tangent += tangent;
+        vertices[i2].tangent += tangent;
+        vertices[i3].tangent += tangent;
+    }
+
+    for (auto& vertex : vertices) {
+        vertex.tangent = glm::normalize(vertex.tangent);
+    }
+}
 
 std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName, const std::filesystem::path& modelPath,
 	std::unordered_map<std::string, Texture>& loadedTextures) {
@@ -65,6 +103,8 @@ Mesh3D fromAssimpMesh(const aiMesh* mesh, const aiScene* scene, const std::files
         faces.push_back(meshFace.mIndices[1]);
         faces.push_back(meshFace.mIndices[2]);
 	}
+
+    calculateTangents(vertices, faces);
 
 	// Load any base textures, specular maps, and normal maps associated with the mesh.
 	std::vector<Texture> textures = {};

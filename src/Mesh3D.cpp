@@ -2,7 +2,6 @@
 #include "Mesh3D.h"
 #include <glad/glad.h>
 
-
 Mesh3D::Mesh3D(std::vector<Vertex3D>&& vertices, std::vector<uint32_t>&& faces,
 	Texture texture)
 	: Mesh3D(std::move(vertices), std::move(faces), std::vector<Texture>{texture}) {
@@ -37,6 +36,10 @@ Mesh3D::Mesh3D(std::vector<Vertex3D>&& vertices, std::vector<uint32_t>&& faces, 
 	glVertexAttribPointer(2, 2, GL_FLOAT, false, sizeof(Vertex3D), (void*)24);
 	glEnableVertexAttribArray(2);
 
+    // TODO(liam): add tangent vector
+	glVertexAttribPointer(3, 3, GL_FLOAT, false, sizeof(Vertex3D), (void*)32);
+	glEnableVertexAttribArray(3);
+
 
 	// Generate a second buffer, to store the indices of each triangle in the mesh.
 	uint32_t ebo;
@@ -47,6 +50,7 @@ Mesh3D::Mesh3D(std::vector<Vertex3D>&& vertices, std::vector<uint32_t>&& faces, 
 	// Unbind the vertex array, so no one else can accidentally mess with it.
 	glBindVertexArray(0);
 }
+
 
 void Mesh3D::addTexture(Texture texture) {
 	m_textures.push_back(texture);

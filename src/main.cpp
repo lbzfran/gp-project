@@ -32,7 +32,7 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
-// #define SFML_V2
+#define SFML_V2
 
 sf::Vector2<uint32_t> winSize = {1200, 800};
 
@@ -41,22 +41,22 @@ struct DirLight {
 
     glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
 
-    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 ambient{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 diffuse{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
 };
 
 struct PointLight {
     bool display = true;
 
-    glm::vec3 position;
+    glm::vec3 position{ 2.f, 2.0f, 0.f };
 
     float constant = 1.0f;
     float linear = 0.14f;
     float quadratic = 0.07f;
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 diffuse{ 0.8f, 0.8f, 0.4f };
     glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
 };
 
@@ -242,7 +242,7 @@ Scene testSquare() {
  * @brief Loads a cube with a cube map texture.
  */
 Scene cube() {
-	Scene scene{ phongLightingShader() };
+	Scene scene{ toonLightingShader() };
 
 	auto cube = assimpLoad("models/cube.obj", true);
 
@@ -297,8 +297,8 @@ Scene lifeOfPi() {
 
 	std::vector<Texture> textures = {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
-		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
-		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
@@ -459,7 +459,7 @@ int main() {
     glCullFace(GL_BACK);
 
 	// Inintialize scene objects.
-	auto myScene = lifeOfPi();
+	auto myScene = cube();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 

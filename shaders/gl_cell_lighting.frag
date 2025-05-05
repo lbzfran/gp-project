@@ -7,7 +7,7 @@ layout (location=0) out vec4 FragColor;
 in vec2 TexCoord;
 in vec3 FragWorldPos;
 in vec3 Normal;
-// in mat3 TBN;
+in mat3 TBN;
 
 // Uniforms: MUST BE PROVIDED BY THE APPLICATION.
 
@@ -72,7 +72,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 eyeDir) {
 
     float lambertFactor = max(dot(normal, lightDir), 0.0);
 
-    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 reflectDir = (reflect(-lightDir, normal));
     float spec = pow(max(dot(reflectDir, eyeDir), 0.0), material.shininess);
 
     vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoord));
@@ -90,7 +90,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 eyeDir) {
     float distance = length(light.position - FragWorldPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
-    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 reflectDir = (reflect(-lightDir, normal));
     float spec = pow(max(dot(reflectDir, eyeDir), 0.0), material.shininess);
 
     vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoord));
@@ -134,16 +134,16 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 eyeDir) {
 
 void main() {
 
-    vec3 norm = normalize(Normal);
-    // vec3 norm = texture(material.normal, TexCoord).rgb;
-    // norm = normalize((norm * 2.0 - 1.0));
+    // vec3 norm = normalize(Normal);
+    vec3 norm = texture(material.normal, TexCoord).rgb;
+    norm = normalize(TBN * (norm * 2.0 - 1.0));
 
     vec3 eyeDir = normalize(viewPos - FragWorldPos);
 
     vec3 result = vec3(0);
     result += CalcDirLight(dirLight, norm, eyeDir);
     result += CalcPointLight(pointLight, norm, eyeDir);
-    // result += CalcSpotLight(spotLight, norm, eyeDir);
+    result += CalcSpotLight(spotLight, norm, eyeDir);
 
     FragColor = vec4(result, 1.0);
 }
