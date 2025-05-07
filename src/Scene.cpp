@@ -346,11 +346,26 @@ void printObjectHierarchy(const Object3D& root) {
 Scene Sanders() {
     Scene scene{ toonLightingShader() };
 
+	std::vector<Texture> textures = {
+		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
+		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
+		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
+		loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
+		// loadTexture("models/Tiles/Tiles_057_normal.png", "material.normal"),
+	};
+	auto mesh = Mesh3D::square(textures);
+	auto floor = Object3D(std::vector<Mesh3D>{mesh});
+	floor.grow(glm::vec3(100));
+	floor.move(glm::vec3(0, 0, 0));
+	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
+
+	scene.objects.push_back(std::move(floor));
+
     auto brr = assimpLoad("models/brr/scene.gltf", true);
     // auto trala = assimpLoad("models/trala/scene.gltf", true);
     // auto thung = assimpLoad("models/thung/scene.gltf", true);
 
-    brr.move(glm::vec3(0, -5, 0));
+    brr.move(glm::vec3(0));
 
     // trala.move(glm::vec3(10, -5, -10));
     // trala.grow(glm::vec3(-0.5));
@@ -362,10 +377,10 @@ Scene Sanders() {
     // scene.objects.push_back(std::move(trala));
     // scene.objects.push_back(std::move(thung));
 
-    printObjectHierarchy(scene.objects[0]);
+    printObjectHierarchy(scene.objects[1]);
     // printObjectHierarchy(scene.objects[1]);
 
-    auto& obj = scene.objects[0];
+    auto& obj = scene.objects[1];
 
     // auto& first_1 = first.getChild(0);
     // auto& first_2 = first.getChild(0).getChild(0);

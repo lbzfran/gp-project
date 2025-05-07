@@ -55,11 +55,20 @@ sf::Vector2<uint32_t> winSize = {1200, 800};
 //     return textureID;
 // }
 
-/*****************************************************************************************
-*  DEMONSTRATION SCENES
-*****************************************************************************************/
+bool CheckCollision(Object3D& one, Object3D& two) {
+    bool collidedX = one.getPosition().x + one.getScale().x >= two.getPosition().x && two.getPosition().x + two.getScale().x >= one.getPosition().x;
+    bool collidedY = one.getPosition().y + one.getScale().y >= two.getPosition().y && two.getPosition().y + two.getScale().y >= one.getPosition().y;
+    bool collidedZ = one.getPosition().z + one.getScale().z >= two.getPosition().z && two.getPosition().z + two.getScale().z >= one.getPosition().z;
 
+    bool result = collidedX && collidedY && collidedZ;
 
+    if (result)
+        std::cout << "colliding!" << std::endl;
+    else
+        std::cout << "not colliding!" << std::endl;
+
+    return result;
+}
 
 int main() {
 	std::cout << std::filesystem::current_path() << std::endl;
@@ -116,12 +125,15 @@ int main() {
 	auto last = c.getElapsedTime();
 
 	// Start the animators.
-	for (auto& anim : myScene.animators) {
-		anim.start();
-	}
+	// for (auto& anim : myScene.animators) {
+	// 	anim.start();
+	// }
 
     float targetLockCooldown = 0.0;
     bool targetLock = false;
+
+    bool isJumping = false;
+    float jumpTimer = 0.0f;
 
     bool moveHeld = false;
 
@@ -152,6 +164,7 @@ int main() {
                 window.setSize({ winSize.x, winSize.y });
                 glViewport(0, 0, winSize.x, winSize.y);
 
+                fb.Resize();
                 /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
@@ -184,6 +197,7 @@ int main() {
                 window.setSize(winSize);
                 glViewport(0, 0, winSize.x, winSize.y);
 
+                fb.Resize();
                 /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
@@ -217,7 +231,10 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
             if (!targetLockCooldown) {
                 if (!targetLock) {
-                    myScene.camera.SetTarget(myScene.objects[0].getPosition());
+                    // for (auto& anim : myScene.animators) {
+                    //     anim.start();
+                    // }
+                    myScene.camera.SetTarget(&myScene.objects[1].getPosition());
                 }
                 else {
                     myScene.camera.DropTarget();
@@ -246,6 +263,40 @@ int main() {
 
                 myScene.camera.ToggleFocus();
             }
+        }
+
+        Object3D& player = myScene.objects[1];
+        CheckCollision(player, myScene.objects[0]);
+
+        glm::vec3 totalAcceleration = glm::vec3(0);
+        glm::vec3 totalRotAcceleration = glm::vec3(0);
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::U)) {
+            if (not isJumping && player.getPosition().y == 0.0) {
+                isJumping = true;
+                jumpTimer = 1.25f;
+            }
+        }
+        // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::O)) {
+        //     player.setAcceleration(glm::vec3(0, -5, 0));
+        // }
+
+        // if (player.getPosition().y > 0.0f)
+        {
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::I)) {
+                totalAcceleration += glm::vec3(0, 0, 5);
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::K)) {
+                totalAcceleration += glm::vec3(0, 0, -5);
+            }
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J)) {
+            // totalAcceleration += glm::vec3(5, 0, 0);
+            totalRotAcceleration += glm::vec3(0, -5, 0);
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::L)) {
+            // totalAcceleration += glm::vec3(-5, 0, 0);
+            totalRotAcceleration += glm::vec3(0, 5, 0);
         }
 
         glm::vec3 direction = glm::vec3(0);
@@ -291,15 +342,34 @@ int main() {
             }
         }
 
+        if (jumpTimer > 0.0) {
+            jumpTimer -= dt;
+            if (jumpTimer <= 0.0) {
+                jumpTimer = 0.0;
+                isJumping = false;
+            }
+        }
+
+        if (isJumping) {
+            totalAcceleration += glm::vec3(0, 5, 0);
+        }
+
+
+        player.setAcceleration(totalAcceleration);
+        player.setRotAcceleration(totalRotAcceleration);
+
         myScene.camera.update((float)winSize.x, (float)winSize.y, dt);
 
 		// Update the scene.
         for (auto& o : myScene.objects) {
             o.tick(dt);
-            if (o.getPosition().y <= 2.5f) {
-                o.setPosition(glm::vec3(2.5f));
-                o.setAcceleration(glm::vec3(0.f));
-            }
+            // if (o.getPosition().y < 0.f) {
+            //     o.setVelocity(-o.getVelocity());
+            //     o.setAcceleration(glm::vec3(o.getAcceleration().x, 5.f, o.getAcceleration().z));
+            // }
+            // else if (o.getPosition().y > 0.f) {
+            //     o.setAcceleration(glm::vec3(o.getAcceleration().x, -5.f, o.getAcceleration().z));
+            // }
         }
 
 		for (auto& anim : myScene.animators) {
@@ -310,7 +380,7 @@ int main() {
         // sends render calls to Texture map.
         // also clears the textures
         // and enables certain tests automatically
-        fb.RenderOnTexture(winSize.x, winSize.y);
+        fb.RenderOnTexture();
         // fb.RenderOnScreen();
         // fb.Clear();
 
@@ -354,7 +424,7 @@ int main() {
         /*glEnable(GL_DEPTH_TEST);*/
 
         // sends texture map to view buffer.
-        fb.TextureToScreen(winSize.x, winSize.y);
+        fb.TextureToScreen();
 
 		window.display();
 	}

@@ -22,7 +22,22 @@ class Framebuffer {
 
         ShaderProgram program;
 
-        Framebuffer(uint32_t width, uint32_t height, ShaderProgram p, bool enableCull = false, bool enableStencil = false) {
+        Framebuffer(uint32_t& width, uint32_t& height, ShaderProgram p, bool enableCull = false, bool enableStencil = false) : program(p), winWidth(width), winHeight(height), cullEnabled(enableCull), stencilEnabled(enableStencil) {
+            Resize();
+        };
+
+        ~Framebuffer() {
+            glDeleteVertexArrays(1, &screenVAO);
+            glDeleteBuffers(1, &screenVBO);
+            glDeleteRenderbuffers(1, &rboId);
+            glDeleteTextures(1, &textureId);
+            glDeleteFramebuffers(1, &fboId);
+        }
+
+        void Resize() {
+            glDeleteRenderbuffers(1, &rboId);
+            glDeleteTextures(1, &textureId);
+            glDeleteFramebuffers(1, &fboId);
 
             // sets up VAO and VBO that wil fit the whole screen.
             glGenVertexArrays(1, &screenVAO);
@@ -43,7 +58,7 @@ class Framebuffer {
             // set up texture buffer
             glGenTextures(1, &textureId);
             glBindTexture(GL_TEXTURE_2D, textureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, winWidth, winHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -56,7 +71,7 @@ class Framebuffer {
             // set up render buffer object
             glGenRenderbuffers(1, &rboId);
             glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, winWidth, winHeight);
 
             glBindRenderbuffer(GL_RENDERBUFFER, 0);
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboId);
@@ -66,47 +81,6 @@ class Framebuffer {
                 std::cout << "ERROR: Framebuffer incomplete!" << std::endl;
             }
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-            program = p;
-            cullEnabled = enableCull;
-            stencilEnabled = enableStencil;
-        };
-
-        ~Framebuffer() {
-            glDeleteVertexArrays(1, &screenVAO);
-            glDeleteBuffers(1, &screenVBO);
-            glDeleteRenderbuffers(1, &rboId);
-            glDeleteTextures(1, &textureId);
-            glDeleteFramebuffers(1, &fboId);
-        }
-
-        // idk if this is necessary
-        void Resize(float width, float height) {
-            if (rboId && textureId) {
-                glDeleteRenderbuffers(1, &rboId);
-                glDeleteTextures(1, &textureId);
-            }
-
-            // set up texture buffer
-            glGenTextures(1, &textureId);
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
-
-            // set up render buffer object
-            glGenRenderbuffers(1, &rboId);
-            glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-            glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboId);
-
         }
 
         void Clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f, bool includeDepth = true) {
@@ -140,9 +114,9 @@ class Framebuffer {
             Clear();
         }
 
-        void RenderOnTexture(uint32_t width, uint32_t height) {
+        void RenderOnTexture() {
             // binds the framebuffer for drawing
-            glViewport(0, 0, width, height);
+            glViewport(0, 0, winWidth, winHeight);
             glBindFramebuffer(GL_FRAMEBUFFER, fboId);
             // glViewport(0, 0, width, height);
 
@@ -156,11 +130,11 @@ class Framebuffer {
             Clear();
         }
 
-        void TextureToScreen(uint32_t width, uint32_t height) {
+        void TextureToScreen() {
             // binds view buffer for drawing
             // glViewport(0, 0, width, height);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glViewport(0, 0, width, height);
+            glViewport(0, 0, winWidth, winHeight);
 
             Clear(1.0f, 1.0f, 1.0f, 1.0f, false);
 
@@ -184,6 +158,9 @@ class Framebuffer {
     private:
         uint32_t screenVAO;
         uint32_t screenVBO;
+
+        uint32_t& winWidth;
+        uint32_t& winHeight;
 
         bool cullEnabled;
         bool stencilEnabled;

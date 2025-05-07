@@ -33,7 +33,7 @@ class Camera {
         bool isFocused;
 
         bool isTargetting;
-        glm::vec3 target;
+        glm::vec3* target;
         glm::vec3 hover;
         float targetLerp;
 
@@ -50,7 +50,7 @@ class Camera {
         float mouseSensitivity;
 
 
-    Camera(glm::vec3 pos = glm::vec3(0.f, 0.f, 3.f), glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f), float y = YAW, float p = PITCH) : front(glm::vec3(0.f, 0.f, 0.f)), zoom(ZOOM), moveSpeed(MOVESPEED), mouseSensitivity(SENSITIVITY) {
+    Camera(glm::vec3 pos = glm::vec3(0.f, 2.f, 3.f), glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f), float y = YAW, float p = PITCH) : front(glm::vec3(0.f, 0.f, 0.f)), zoom(ZOOM), moveSpeed(MOVESPEED), mouseSensitivity(SENSITIVITY) {
         position = pos;
         up = worldUp;
         yaw = y;
@@ -58,6 +58,7 @@ class Camera {
 
         isFocused = true;
         isTargetting = false;
+        target = NULL;
 
         UpdateVectors();
         RequestView();
@@ -79,11 +80,12 @@ class Camera {
 
         if (moveDelta.x || moveDelta.y || moveDelta.z) {
             if (isTargetting) {
-                hover += moveDelta;
+                // hover += moveDelta;
+                position = hover;
             }
             else {
                 position += moveDelta;
-                hover = position;
+                // hover = position;
             }
             RequestView();
         }
@@ -91,7 +93,7 @@ class Camera {
 
     void ProcessMouseMove(float xOff, float yOff, bool limitPitch = true) {
         if (xOff || yOff) {
-            if (!isTargetting && isFocused) {
+            if (isFocused) {
                 xOff *= mouseSensitivity;
                 yOff *= mouseSensitivity;
 
@@ -132,7 +134,7 @@ class Camera {
         RequestView();
     }
 
-    void SetTarget(glm::vec3 t) {
+    void SetTarget(glm::vec3* t) {
         isTargetting = true;
         target = t;
         zoom = ZOOM;
@@ -212,8 +214,13 @@ class Camera {
 
     // call during movement
     void UpdateView() {
-        glm::vec3 actualPosition = GLVec3Lerp(position, targetLerp, hover);
-        glm::vec3 actualTarget = GLVec3Lerp(position + front, targetLerp, target);
+        glm::vec3 actualPosition = position;
+        glm::vec3 actualTarget = position + front;
+        if (target) {
+            hover = *target + glm::vec3(-4.5f, 3.f, -4.5f);
+            actualPosition = GLVec3Lerp(position, targetLerp, hover);
+            actualTarget = GLVec3Lerp(position + front, targetLerp, *target + front);
+        }
 
         view = glm::lookAt(actualPosition, actualTarget, up);
     }

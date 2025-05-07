@@ -14,6 +14,8 @@ private:
 	glm::vec3 m_scale;
 	glm::vec3 m_center;
 
+    glm::vec3 m_forward;
+
     // speed
     glm::vec3 m_velocity;
     glm::vec3 m_acceleration;
@@ -49,8 +51,11 @@ public:
 	const glm::vec3& getScale() const;
 	const glm::vec3& getCenter() const;
 	const std::string& getName() const;
+    const glm::vec3& getVelocity() const;
+    const glm::vec3& getRotVelocity() const;
     const glm::vec3& getAcceleration() const;
     const glm::vec3& getRotAcceleration() const;
+    const glm::vec3& getForward() const;
     const float getShininess() const;
 	/*const glm::vec4& getMaterial() const;*/
 
@@ -66,8 +71,11 @@ public:
 	void setScale(const glm::vec3& scale);
 	void setCenter(const glm::vec3& center);
 	void setName(const std::string& name);
+    void setVelocity(const glm::vec3& vec);
+    void setRotVelocity(const glm::vec3& vec);
     void setAcceleration(const glm::vec3& accel);
     void setRotAcceleration(const glm::vec3& accel);
+    void setForward(const glm::vec3& vec);
     void setShininess(const float value);
 	/*void setMaterial(const glm::vec4& material);*/
 
@@ -76,6 +84,8 @@ public:
 	void rotate(const glm::vec3& rotation);
 	void grow(const glm::vec3& growth);
 	void addChild(Object3D&& child);
+
+    void updateForward();
 
     // movement
     void tick(float_t dt);
