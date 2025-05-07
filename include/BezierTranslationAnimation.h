@@ -5,8 +5,6 @@
  */
 class BezierTranslationAnimation : public Animation {
 private:
-	// glm::vec3 m_perSecond;
-	glm::vec3& m_objectPosition;
     const glm::vec3 m_startPoint;
     const glm::vec3 m_mid1Point;
     const glm::vec3 m_mid2Point;
@@ -41,13 +39,13 @@ private:
                         (3 * invT * tSquared * m_mid2Point.z) +
                         (tCubed * m_endPoint.z);
 
-        m_objectPosition = bezierV;
+        object().setPosition(bezierV);
 	}
 
 public:
-	BezierTranslationAnimation(Object3D& obj, glm::vec3& objectPosition, float duration, const glm::vec3& mid1Point, const glm::vec3& mid2Point, const glm::vec3& totalMovement) :
-		Animation(obj, duration), m_objectPosition(objectPosition), m_startPoint(objectPosition), m_mid1Point(mid1Point), m_mid2Point(mid2Point), m_endPoint(glm::vec3(objectPosition + totalMovement)) {}
-	BezierTranslationAnimation(Object3D& obj, glm::vec3& objectPosition, float duration, const glm::vec3& startPoint, const glm::vec3& mid1Point, const glm::vec3& mid2Point, const glm::vec3& endPoint) :
-		Animation(obj, duration), m_objectPosition(objectPosition), m_startPoint(startPoint), m_mid1Point(mid1Point), m_mid2Point(mid2Point), m_endPoint(endPoint) {}
+	// BezierTranslationAnimation(Object3D& obj, float duration, const glm::vec3& mid1Point, const glm::vec3& mid2Point, const glm::vec3& totalMovement) :
+	// 	Animation(obj, duration), m_startPoint(objectPosition), m_mid1Point(mid1Point), m_mid2Point(mid2Point), m_endPoint(glm::vec3(objectPosition + totalMovement)) {}
+	BezierTranslationAnimation(Object3D& obj, float duration, const glm::vec3& startPoint, const glm::vec3& mid1Point, const glm::vec3& mid2Point, const glm::vec3& endPoint) :
+		Animation(obj, duration), m_startPoint(startPoint), m_mid1Point(mid1Point), m_mid2Point(mid2Point), m_endPoint(endPoint) {}
 };
 

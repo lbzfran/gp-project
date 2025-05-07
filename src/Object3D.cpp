@@ -28,6 +28,10 @@ const glm::vec3& Object3D::getPosition() const {
 	return m_position;
 }
 
+glm::vec3& Object3D::getPosition() {
+	return m_position;
+}
+
 const glm::vec3& Object3D::getOrientation() const {
 	return m_orientation;
 }

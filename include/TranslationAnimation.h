@@ -8,14 +8,13 @@ private:
 	/**
 	 * @brief How much to increment the position by each second.
 	 */
-	glm::vec3& m_objectPosition;
 	glm::vec3 m_perSecond;
 
 	/**
 	 * @brief Advance the animation by the given time interval.
 	 */
 	void applyAnimation(float dt) override {
-		m_objectPosition += m_perSecond * dt;
+		object().move(m_perSecond * dt);
 	}
 
 public:
@@ -23,7 +22,7 @@ public:
 	 * @brief Constructs a animation of a constant rotation by the given total rotation
 	 * angle, linearly interpolated across the given duration.
 	 */
-	TranslationAnimation(Object3D& obj, glm::vec3& objectPosition, float duration, const glm::vec3& totalMovement) :
-		Animation(obj, duration), m_objectPosition(objectPosition), m_perSecond(totalMovement / duration) {}
+	TranslationAnimation(Object3D& obj, float duration, const glm::vec3& totalMovement) :
+		Animation(obj, duration), m_perSecond(totalMovement / duration) {}
 };
 

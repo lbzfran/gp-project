@@ -16,18 +16,9 @@ We now transform local space vertices to clip space using uniform matrices in th
 #include <optional>
 #include <math.h>
 
-#include "AssimpImport.h"
-#include "Mesh3D.h"
-#include "Object3D.h"
-#include "ShaderProgram.h"
-#include "Camera.h"
 #include "Framebuffer.h"
 
-#include "Animator.h"
-#include "RotationAnimation.h"
-#include "TranslationAnimation.h"
-#include "PauseAnimation.h"
-#include "BezierTranslationAnimation.h"
+#include "Scene.cpp"
 
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
@@ -35,146 +26,6 @@ We now transform local space vertices to clip space using uniform matrices in th
 // #define SFML_V2
 
 sf::Vector2<uint32_t> winSize = {1200, 800};
-
-struct DirLight {
-    bool display = true;
-
-    glm::vec3 direction{ 1.0f, -1.0f, 0.0f };
-
-    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
-};
-
-struct PointLight {
-    bool display = true;
-
-    glm::vec3 position{ 2.f, 2.0f, 0.f };
-
-    float constant = 1.0f;
-    float linear = 0.14f;
-    float quadratic = 0.07f;
-
-    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.8f, 0.8f, 0.4f };
-    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
-};
-
-struct SpotLight {
-    bool display = true;
-
-    glm::vec3 position{ 0.f, 1.f, 0.f };
-    glm::vec3 direction{ 0.f, -1.f, 0.f };
-    float cutOff = 7.5f;
-    float outerCutOff = 10.0f;
-
-    float constant = 1.0f;
-    float linear = 0.35f;
-    float quadratic = 0.44f;
-
-    glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
-};
-
-struct Scene {
-    ShaderProgram program;
-    std::vector<Object3D> objects;
-    std::vector<Animator> animators;
-
-    Camera camera = Camera();
-
-    DirLight dlight;
-    PointLight plight;
-    SpotLight slight;
-};
-
-ShaderProgram toonLightingShader() {
-	ShaderProgram shader;
-	try {
-		shader.load("shaders/light_perspective.vert", "shaders/gl_cell_lighting.frag");
-	}
-	catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-		exit(1);
-	}
-	return shader;
-}
-
-ShaderProgram FB_simpleShader() {
-    ShaderProgram shader;
-    try {
-        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_simple.frag");
-    }
-    catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-        exit(1);
-    }
-    return shader;
-}
-
-ShaderProgram FB_sharpenShader() {
-    ShaderProgram shader;
-    try {
-        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_sharpen.frag");
-    }
-    catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-        exit(1);
-    }
-    return shader;
-}
-
-/**
- * @brief Constructs a shader program that applies the Phong reflection model.
- */
-ShaderProgram phongLightingShader() {
-	ShaderProgram shader;
-	try {
-		shader.load("shaders/light_perspective.vert", "shaders/gl_phong_lighting.frag");
-	}
-	catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-		exit(1);
-	}
-	return shader;
-}
-
-/**
- * @brief Constructs a shader program that performs texture mapping with no lighting.
- */
-ShaderProgram texturingShader() {
-	ShaderProgram shader;
-	try {
-		shader.load("shaders/texture_perspective.vert", "shaders/texturing.frag");
-	}
-	catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-		exit(1);
-	}
-	return shader;
-}
-
-ShaderProgram simpleShader() {
-	ShaderProgram shader;
-	try {
-		shader.load("shaders/simple_perspective.vert", "shaders/uniform_color.frag");
-	}
-	catch (std::runtime_error& e) {
-		std::cout << "ERROR: " << e.what() << std::endl;
-		exit(1);
-	}
-	return shader;
-}
-
-/**
- * @brief Loads an image from the given path into an OpenGL texture.
- */
-Texture loadTexture(const std::filesystem::path& path, const std::string& samplerName = "material.diffuse") {
-	StbImage i;
-	i.loadFromFile(path.string());
-	return Texture::loadImage(i, samplerName);
-}
 
 // uint32_t loadCubemap(vector<std::string> faces) {
 //     unsigned int textureID;
@@ -207,265 +58,7 @@ Texture loadTexture(const std::filesystem::path& path, const std::string& sample
 /*****************************************************************************************
 *  DEMONSTRATION SCENES
 *****************************************************************************************/
-Scene bunny() {
-	Scene scene{ texturingShader() };
 
-	// We assume that (0,0) in texture space is the upper left corner, but some artists use (0,0) in the lower
-	// left corner. In that case, we have to flip the V-coordinate of each UV texture location. The last parameter
-	// to assimpLoad controls this. If you load a model and it looks very strange, try changing the last parameter.
-	auto bunny = assimpLoad("models/bunny_textured.obj", true);
-	bunny.grow(glm::vec3(9, 9, 9));
-	bunny.move(glm::vec3(0.2, -1, 0));
-
-	// Move all objects into the scene's objects list.
-	scene.objects.push_back(std::move(bunny));
-	// Now the "bunny" variable is empty; if we want to refer to the bunny object, we need to reference
-	// scene.objects[0]
-
-	Animator spinBunny;
-	// Spin the bunny 360 degrees over 10 seconds.
-	spinBunny.addAnimation(
-        [&] () {
-        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, 2 * M_PI, 0));
-        }
-    );
-
-	// Move all animators into the scene's animators list.
-	scene.animators.push_back(std::move(spinBunny));
-
-	return scene;
-}
-
-
-/**
- * @brief Demonstrates loading a square, oriented as the "floor", with a manually-specified texture
- * that does not come from Assimp.
- */
-Scene marbleSquare() {
-	Scene scene{ toonLightingShader() };
-
-	std::vector<Texture> textures = {
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
-	};
-	auto mesh = Mesh3D::square(textures);
-	auto floor = Object3D(std::vector<Mesh3D>{mesh});
-	floor.grow(glm::vec3(5, 5, 5));
-	floor.move(glm::vec3(0, -1.5, 0));
-	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
-
-	scene.objects.push_back(std::move(floor));
-	return scene;
-}
-
-Scene testSquare() {
-	Scene scene{ toonLightingShader() };
-
-	std::vector<Texture> textures = {
-		loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
-		loadTexture("models/Tiles/Tiles_057_normal.png", "material.normal"),
-        loadTexture("models/Tiles/Tiles_057_ambientOcclusion.png", "material.specular"),
-	};
-	auto mesh = Mesh3D::square(textures);
-	auto floor = Object3D(std::vector<Mesh3D>{mesh});
-	floor.grow(glm::vec3(5, 5, 5));
-	floor.move(glm::vec3(0, -1.5, 0));
-	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
-
-	scene.objects.push_back(std::move(floor));
-	return scene;
-}
-
-/**
- * @brief Loads a cube with a cube map texture.
- */
-Scene cube() {
-	Scene scene{ toonLightingShader() };
-
-	auto cube = assimpLoad("models/cube.obj", true);
-
-	Texture tilemap = loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse");
-    /*cube.addTexture(tilemap);*/
-
-	scene.objects.push_back(std::move(cube));
-
-	Animator spinCube;
-	spinCube.addAnimation(
-        [&] () {
-        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(0, M_PI, 0));
-        }
-    );
-	// Then spin around the x axis.
-	spinCube.addAnimation(
-        [&] () {
-        return std::make_unique<RotationAnimation>(scene.objects[0], 10.0, glm::vec3(M_PI, 0, 0));
-        }
-    );
-
-	scene.animators.push_back(std::move(spinCube));
-
-	return scene;
-}
-
-Scene lightCube() {
-    Scene scene { toonLightingShader() };
-
-	auto cube = assimpLoad("models/cube.obj", true);
-
-	scene.objects.push_back(std::move(cube));
-	return scene;
-}
-
-/**
- * @brief Constructs a scene of a tiger sitting in a boat, where the tiger is the child object
- * of the boat.
- * @return
- */
-Scene lifeOfPi() {
-	// This scene is more complicated; it has child objects, as well as animators.
-	Scene scene{ toonLightingShader() };
-
-	auto boat = assimpLoad("models/boat/boat.fbx", true);
-	boat.move(glm::vec3(0, -0.7, 0));
-	boat.grow(glm::vec3(0.01, 0.01, 0.01));
-	auto tiger = assimpLoad("models/tiger/scene.gltf", true);
-	tiger.move(glm::vec3(0, -5, 10));
-	// Move the tiger to be a child of the boat.
-	boat.addChild(std::move(tiger));
-
-	// Move the boat into the scene list.
-	scene.objects.push_back(std::move(boat));
-
-	std::vector<Texture> textures = {
-		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
-		/*loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),*/
-		/*loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),*/
-	};
-	auto mesh = Mesh3D::square(textures);
-	auto floor = Object3D(std::vector<Mesh3D>{mesh});
-	floor.grow(glm::vec3(5, 5, 5));
-	floor.move(glm::vec3(0, -1.5, 0));
-	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
-
-	scene.objects.push_back(std::move(floor));
-
-	// We want these animations to referenced the *moved* objects, which are no longer
-	// in the variables named "tiger" and "boat". "boat" is now in the "objects" list at
-	// index 0, and "tiger" is the index-1 child of the boat.
-	Animator animBoat;
-	animBoat.addAnimation(
-        [&] () {
-        return std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(0, 2 * M_PI, 0));
-        }
-    );
-
-	Animator animTiger;
-	animTiger.addAnimation(
-        [&] () {
-        return std::make_unique<RotationAnimation>(scene.objects[0].getChild(1), 10, glm::vec3(0, 2 * M_PI, 0));
-        }
-    );
-
-	// The Animators will be destroyed when leaving this function, so we move them into
-	// a list to be returned.
-	scene.animators.push_back(std::move(animBoat));
-	scene.animators.push_back(std::move(animTiger));
-
-	// Transfer ownership of the objects and animators back to the main.
-	return scene;
-}
-
-Scene Room() {
-	Scene scene{ toonLightingShader() };
-
-    /*scene.plight.position = {2.f, 2.f, -3.f};*/
-
-	auto room = assimpLoad("models/cube.obj", true);
-
-	room.grow(glm::vec3(0.5f));
-	/*lady.grow(glm::vec3(0.25));*/
-	/*lady.move(glm::vec3(0, -25, -50));*/
-
-	/*auto cube = assimpLoad("models/cube.obj", true);*/
-	/*cube.move(glm::vec3(0.2, -1, -10));*/
-
-	scene.objects.push_back(std::move(room));
-
-	/*Animator animLady;*/
-	/*animLady.addAnimation(std::make_unique<RotationAnimation>(scene.objects[0], 10, glm::vec3(2 * M_PI, 2 * M_PI, 0)));*/
-
-	/*scene.animators.push_back(std::move(animLady));*/
-
-    return scene;
-}
-
-void GLSetCameraUniform(Scene& scene) {
-    Camera& camera = scene.camera;
-    ShaderProgram& program = scene.program;
-
-    program.setUniform("view", camera.view);
-    program.setUniform("projection", camera.perspective);
-    program.setUniform("viewPos", camera.position);
-
-    program.setUniform("ambientColor", glm::vec3(0.1f));
-
-    /// lighting
-    // directional light
-    if (scene.dlight.display) {
-        program.setUniform("dirLight.direction", scene.dlight.direction);
-        program.setUniform("dirLight.ambient", scene.dlight.ambient);
-        program.setUniform("dirLight.diffuse", scene.dlight.diffuse);
-        program.setUniform("dirLight.specular", scene.dlight.specular);
-    }
-    else {
-        program.setUniform("dirLight.ambient", scene.dlight.ambient);
-        program.setUniform("dirLight.diffuse", glm::vec3(0));
-        program.setUniform("dirLight.specular", glm::vec3(0));
-    }
-
-    // point light
-    if (scene.plight.display) {
-        program.setUniform("pointLight.position", scene.plight.position);
-
-        program.setUniform("pointLight.constant", scene.plight.constant);
-        program.setUniform("pointLight.linear", scene.plight.linear);
-        program.setUniform("pointLight.quadratic", scene.plight.quadratic);
-
-        program.setUniform("pointLight.ambient", scene.plight.ambient);
-        program.setUniform("pointLight.diffuse", scene.plight.diffuse);
-        program.setUniform("pointLight.specular", scene.plight.specular);
-    }
-    else {
-        program.setUniform("pointLight.ambient", scene.slight.ambient);
-        program.setUniform("pointLight.diffuse", glm::vec3(0));
-        program.setUniform("pointLight.specular", glm::vec3(0));
-    }
-
-    // spotlight
-    if (scene.slight.display) {
-        /*program.setUniform("spotLight.direction", scene.slight.direction);*/
-        /*program.setUniform("spotLight.position", scene.slight.position);*/
-
-        // flashlight
-        program.setUniform("spotLight.direction", camera.front);
-        program.setUniform("spotLight.position", camera.position);
-
-        program.setUniform("spotLight.cutOff", glm::cos(glm::radians(scene.slight.cutOff)));
-
-        program.setUniform("spotLight.constant", scene.slight.constant);
-        program.setUniform("spotLight.linear", scene.slight.linear);
-        program.setUniform("spotLight.quadratic", scene.slight.quadratic);
-
-        program.setUniform("spotLight.ambient", scene.slight.ambient);
-        program.setUniform("spotLight.diffuse", scene.slight.diffuse);
-        program.setUniform("spotLight.specular", scene.slight.specular);
-    }
-    else {
-        program.setUniform("spotLight.ambient", scene.slight.ambient);
-        program.setUniform("spotLight.diffuse", glm::vec3(0));
-        program.setUniform("spotLight.specular", glm::vec3(0));
-    }
-}
 
 
 int main() {
@@ -501,7 +94,7 @@ int main() {
     glCullFace(GL_BACK);
 
 	// Inintialize scene objects.
-	auto myScene = lifeOfPi();
+	auto myScene = Sanders();
 	// You can directly access specific objects in the scene using references.
 	// auto& firstObject = myScene.objects[0];
 
@@ -612,7 +205,7 @@ int main() {
 		auto now = c.getElapsedTime();
 		auto diff = now - last;
         float dt = diff.asSeconds();
-		std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
+		// std::cout << 1 / diff.asSeconds() << " FPS " << std::endl;
 		last = now;
 
         if (lockCursor) {
@@ -701,6 +294,14 @@ int main() {
         myScene.camera.update((float)winSize.x, (float)winSize.y, dt);
 
 		// Update the scene.
+        for (auto& o : myScene.objects) {
+            o.tick(dt);
+            if (o.getPosition().y <= 2.5f) {
+                o.setPosition(glm::vec3(2.5f));
+                o.setAcceleration(glm::vec3(0.f));
+            }
+        }
+
 		for (auto& anim : myScene.animators) {
 			anim.tick(dt);
 		}
@@ -709,7 +310,9 @@ int main() {
         // sends render calls to Texture map.
         // also clears the textures
         // and enables certain tests automatically
-        fb.RenderOnTexture();
+        fb.RenderOnTexture(winSize.x, winSize.y);
+        // fb.RenderOnScreen();
+        // fb.Clear();
 
         // sets what to do on fail; must be done every frame
         /*glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);*/
@@ -751,7 +354,7 @@ int main() {
         /*glEnable(GL_DEPTH_TEST);*/
 
         // sends texture map to view buffer.
-        fb.TextureToScreen();
+        fb.TextureToScreen(winSize.x, winSize.y);
 
 		window.display();
 	}

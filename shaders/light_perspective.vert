@@ -12,8 +12,8 @@ uniform mat4 model;
 
 out vec2 TexCoord;
 out vec3 FragWorldPos;
-out vec3 Normal;
 out mat3 TBN;
+// out vec3 Normal;
 
 void main() {
     // Transform the vertex position from local space to clip space.
@@ -22,7 +22,7 @@ void main() {
     TexCoord = vTexCoord;
     // Transform the vertex normal from local space to world space, using the Normal matrix.
     mat3 normalMatrix = transpose(inverse(mat3(model)));
-    Normal = normalMatrix * vNormal;
+    // Normal = normalMatrix * vNormal;
 
     FragWorldPos = vec3(model * vec4(vPosition, 1.0));
 

@@ -1,0 +1,528 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 4912,
+      "max": [
+        0.1640469878911972,
+        -1.32114577293396,
+        -0.041154950857162476
+      ],
+      "min": [
+        -0.15662088990211487,
+        -1.5832303762435913,
+        -0.1239379495382309
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 58944,
+      "componentType": 5126,
+      "count": 4912,
+      "max": [
+        0.9999575018882751,
+        0.9988911151885986,
+        0.9983574151992798
+      ],
+      "min": [
+        -0.9995126724243164,
+        -0.9946466088294983,
+        -0.9999963641166687
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 4912,
+      "max": [
+        0.9997726082801819,
+        0.9998817443847656,
+        0.9997406601905823,
+        1.0
+      ],
+      "min": [
+        -0.9994886517524719,
+        -0.9998890161514282,
+        -0.9997720122337341,
+        -1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 4912,
+      "max": [
+        0.9953243732452393,
+        0.0198611281812191
+      ],
+      "min": [
+        0.0016969307325780392,
+        0.0016848035156726837
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 23940,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 117888,
+      "componentType": 5126,
+      "count": 2272,
+      "max": [
+        0.18336527049541473,
+        -1.3060559034347534,
+        -0.02795601263642311
+      ],
+      "min": [
+        -0.18156908452510834,
+        -1.5873106718063354,
+        -0.1091940701007843
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 145152,
+      "componentType": 5126,
+      "count": 2272,
+      "max": [
+        0.9982920289039612,
+        0.9996715784072876,
+        0.9778468608856201
+      ],
+      "min": [
+        -0.9999099373817444,
+        -0.9934740662574768,
+        -0.9630360007286072
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 78592,
+      "componentType": 5126,
+      "count": 2272,
+      "max": [
+        0.9972867965698242,
+        0.9990952014923096,
+        0.999514102935791,
+        1.0
+      ],
+      "min": [
+        -0.9975438117980957,
+        -0.9977328777313232,
+        -0.9999681711196899,
+        -1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 39296,
+      "componentType": 5126,
+      "count": 2272,
+      "max": [
+        0.9981391429901123,
+        0.016120702028274536
+      ],
+      "min": [
+        0.10544224083423615,
+        0.0016845166683197021
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 95760,
+      "componentType": 5125,
+      "count": 11136,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 172416,
+      "componentType": 5126,
+      "count": 2940,
+      "max": [
+        0.7293439507484436,
+        2.64939022064209,
+        0.8099715113639832
+      ],
+      "min": [
+        -0.7293439507484436,
+        -1.8916221857070923,
+        -1.1152807474136353
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 207696,
+      "componentType": 5126,
+      "count": 2940,
+      "max": [
+        0.999977707862854,
+        0.9999517798423767,
+        0.9999997615814209
+      ],
+      "min": [
+        -0.999977707862854,
+        -0.9937633275985718,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 114944,
+      "componentType": 5126,
+      "count": 2940,
+      "max": [
+        1.0,
+        0.9998773336410522,
+        0.9999621510505676,
+        1.0
+      ],
+      "min": [
+        -0.9999999403953552,
+        -0.9984933137893677,
+        -0.9998141527175903,
+        1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 57472,
+      "componentType": 5126,
+      "count": 2940,
+      "max": [
+        0.9960698485374451,
+        0.9983053803443909
+      ],
+      "min": [
+        0.0017038342775776982,
+        0.001687263953499496
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 140304,
+      "componentType": 5125,
+      "count": 15288,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Alex CGW (https://sketchfab.com/alex.cgwarrior)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/tralalero-tralala-3d-game-ready-model-free-e043ac3561f9417b800b6cd04a0de163",
+      "title": "Tralalero Tralala 3D Game ready model FREE"
+    },
+    "generator": "Sketchfab-16.64.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 201456,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 80992,
+      "byteOffset": 201456,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 242976,
+      "byteOffset": 282448,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 161984,
+      "byteOffset": 525424,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 687408,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/Tralala_baseColor.png"
+    },
+    {
+      "uri": "textures/Tralala_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Tralala_normal.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Tralala",
+      "normalTexture": {
+        "index": 2
+      },
+      "occlusionTexture": {
+        "index": 1
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "metallicRoughnessTexture": {
+          "index": 1
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "teath1_Tralala_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 4,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "teath2_Tralala_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 6,
+            "POSITION": 5,
+            "TANGENT": 7,
+            "TEXCOORD_0": 8
+          },
+          "indices": 9,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "tralala_Tralala_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 11,
+            "POSITION": 10,
+            "TANGENT": 12,
+            "TEXCOORD_0": 13
+          },
+          "indices": 14,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "d70676f47ce344d5958eb40804eb9825.fbx"
+    },
+    {
+      "children": [
+        3,
+        5,
+        7
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4
+      ],
+      "matrix": [
+        100.0,
+        3.2506556946998675e-15,
+        -2.3923101426702314e-16,
+        0.0,
+        2.39230704638965e-16,
+        -14.639638613153805,
+        -98.92260096295617,
+        0.0,
+        -3.2506557174868353e-15,
+        98.92260096295617,
+        -14.639638613153805,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "teath1"
+    },
+    {
+      "mesh": 0,
+      "name": "teath1_Tralala_0"
+    },
+    {
+      "children": [
+        6
+      ],
+      "matrix": [
+        100.0,
+        3.2506556946998675e-15,
+        -2.3923101426702314e-16,
+        0.0,
+        2.39230704638965e-16,
+        -14.639638613153805,
+        -98.92260096295617,
+        0.0,
+        -3.2506557174868353e-15,
+        98.92260096295617,
+        -14.639638613153805,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "teath2"
+    },
+    {
+      "mesh": 1,
+      "name": "teath2_Tralala_0"
+    },
+    {
+      "children": [
+        8
+      ],
+      "matrix": [
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.629206793918314e-05,
+        -99.99999999999868,
+        0.0,
+        0.0,
+        99.99999999999868,
+        -1.629206793918314e-05,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "tralala"
+    },
+    {
+      "mesh": 2,
+      "name": "tralala_Tralala_0"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ]
+}

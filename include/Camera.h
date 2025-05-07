@@ -21,6 +21,7 @@ inline glm::vec3 GLVec3Lerp(glm::vec3 a, float t, glm::vec3 b) {
     );
 }
 
+
 class Camera {
     public:
         glm::vec3 front;

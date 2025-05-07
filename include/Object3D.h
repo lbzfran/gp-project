@@ -44,6 +44,7 @@ public:
 
 	// Simple accessors.
 	const glm::vec3& getPosition() const;
+	glm::vec3& getPosition();
 	const glm::vec3& getOrientation() const;
 	const glm::vec3& getScale() const;
 	const glm::vec3& getCenter() const;
