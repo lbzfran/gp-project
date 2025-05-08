@@ -26,6 +26,10 @@ class Framebuffer {
             Resize();
         };
 
+        void setProgram(ShaderProgram p) {
+            program = p;
+        }
+
         ~Framebuffer() {
             glDeleteVertexArrays(1, &screenVAO);
             glDeleteBuffers(1, &screenVBO);

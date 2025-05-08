@@ -56,6 +56,8 @@ public:
 	 */
 	void start();
 
+    const float getIndex() const;
+
 	/**
 	 * @brief Advance the animation sequence by the given time interval, in seconds.
 	 */

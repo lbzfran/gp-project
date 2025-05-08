@@ -42,3 +42,7 @@ void Animator::start() {
 	m_currentTime = 0;
 	nextAnimation();
 }
+
+const float Animator::getIndex() const {
+    return m_currentIndex;
+}

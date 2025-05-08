@@ -217,7 +217,7 @@ class Camera {
         glm::vec3 actualPosition = position;
         glm::vec3 actualTarget = position + front;
         if (target) {
-            hover = *target + glm::vec3(0.f, 8.f, 5.0f);
+            hover = *target + glm::vec3(0.f, 2.f, 15.f);
             actualPosition = GLVec3Lerp(position, targetLerp, hover);
             actualTarget = GLVec3Lerp(position + front, targetLerp, *target + front);
         }

@@ -27,7 +27,7 @@ ShaderProgram FB_simpleShader() {
 ShaderProgram FB_sharpenShader() {
     ShaderProgram shader;
     try {
-        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_sharpen.frag");
+        shader.load("shaders/post_process/fb_simple.vert", "shaders/post_process/fb_kernel_edge.frag");
     }
     catch (std::runtime_error& e) {
 		std::cout << "ERROR: " << e.what() << std::endl;

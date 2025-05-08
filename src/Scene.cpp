@@ -19,7 +19,7 @@ struct DirLight {
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
     glm::vec3 diffuse{ 0.6f, 0.6f, 0.6f };
-    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
+    glm::vec3 specular{ 0.2f, 0.2f, 0.2f };
 };
 
 struct PointLight {
@@ -33,7 +33,7 @@ struct PointLight {
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
     glm::vec3 diffuse{ 0.8f, 0.8f, 0.0f };
-    glm::vec3 specular{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
 struct SpotLight {
@@ -48,9 +48,9 @@ struct SpotLight {
     float linear = 0.35f;
     float quadratic = 0.44f;
 
-    glm::vec3 ambient{ 0.0f, 0.0f, 0.0f };
-    glm::vec3 diffuse{ 0.0f, 0.0f, 0.4f };
-    glm::vec3 specular{ 0.8f, 0.8f, 0.8f };
+    glm::vec3 ambient{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 diffuse{ 0.0f, 0.3f, 0.3f };
+    glm::vec3 specular{ 0.0f, 0.8f, 0.8f };
 };
 
 struct Scene {
@@ -352,11 +352,13 @@ Scene Sanders() {
 		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
 		// loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
 		// loadTexture("models/Tiles/Tiles_057_normal.png", "material.normal"),
+		// loadTexture("models/Tiles/Tiles_057_ambientOcclusion.png", "material.specular"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
 	auto wall1 = Object3D(std::vector<Mesh3D>{mesh});
 
+    floor.setShininess(0.9);
 	floor.grow(glm::vec3(100));
 	floor.move(glm::vec3(0, 0, 0));
 	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
@@ -371,6 +373,7 @@ Scene Sanders() {
     auto brr = assimpLoad("models/brr/scene.gltf", true);
     auto trala = assimpLoad("models/trala/scene.gltf", true);
     auto thung = assimpLoad("models/thung/scene.gltf", true);
+	auto tiger = assimpLoad("models/tiger/scene.gltf", true);
 
     brr.move(glm::vec3(0, 5, 0));
 
@@ -381,28 +384,38 @@ Scene Sanders() {
     thung.move(glm::vec3(-10, 10, -10));
     thung.grow(glm::vec3(0.75));
 
+	tiger.move(glm::vec3(0, -5, 22.5));
+	tiger.grow(glm::vec3(0.1));
+    tiger.rotate(glm::vec3(0.f, M_PI, 0.f));
+
     scene.objects.push_back(std::move(brr));
     scene.objects.push_back(std::move(trala));
     scene.objects.push_back(std::move(thung));
+    scene.objects.push_back(std::move(tiger));
 
     // printObjectHierarchy(scene.objects[1]);
-    // printObjectHierarchy(scene.objects[1]);
+    // printObjectHierarchy(scene.objects[2]);
 
-    auto& obj = scene.objects[2];
+    auto& player = scene.objects[2];
 
     // auto& first_1 = first.getChild(0);
     // auto& first_2 = first.getChild(0).getChild(0);
-    // auto& first_3 = first.getChild(0).getChild(0).getChild(0);
+    auto& first = player.getChild(0).getChild(0).getChild(0);
 
-    // auto& first_2 = first.getChild(1);
+    auto& first_1 = first.getChild(0);
     // auto& first_3 = first.getChild(2);
 
 	Animator animThung;
 
+    // backflip
 	animThung.addAnimation(
-	    [&obj] () {
-        return std::make_unique<TranslationAnimation>(obj, 4,
-            obj.getPosition() + glm::vec3(3.f, 2.f, 3.f));
+	    [&player] () {
+        return std::make_unique<PauseAnimation>(player, 1.5f);
+	    }
+    );
+	animThung.addAnimation(
+	    [&player] () {
+        return std::make_unique<RotationAnimation>(player, 1, glm::vec3(2 * M_PI, 0.f, 0.f));
 	    }
     );
 

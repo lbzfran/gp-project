@@ -63,9 +63,7 @@ bool CheckCollision(Object3D& one, Object3D& two) {
     bool result = collidedX && collidedY && collidedZ;
 
     if (result)
-        std::cout << "colliding!" << std::endl;
-    else
-        std::cout << "not colliding!" << std::endl;
+        std::cout << "INFO: collision detected!" << std::endl;
 
     return result;
 }
@@ -110,13 +108,17 @@ int main() {
 	// Activate the shader program.
 	myScene.program.activate();
 
-    ShaderProgram fbs = FB_simpleShader();
-    fbs.activate();
-    fbs.setUniform("screenTexture", 0);
+    bool edgeShading = false;
+    ShaderProgram fbs1 = FB_simpleShader();
+    ShaderProgram fbs2 = FB_sharpenShader();
+    fbs1.activate();
+    fbs1.setUniform("screenTexture", 0);
+    fbs2.activate();
+    fbs2.setUniform("screenTexture", 0);
     // Activate and initialize framebuffer's shader.
     // From now on, framebuffer will handle clearing and setting
     // the draw buffer.
-    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs, true);
+    Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs1, true);
 
 	// Ready, set, go!
 	bool running = true;
@@ -139,6 +141,7 @@ int main() {
     Object3D& floor = myScene.objects[0];
     Object3D& wall = myScene.objects[1];
     Object3D& player = myScene.objects[2];
+    auto& backflip = myScene.animators[0];
 
     // center the mouse initially.
     sf::Vector2<int> centerPosition = {(int)winSize.x / 2, (int)winSize.y / 2};
@@ -273,34 +276,43 @@ int main() {
         glm::vec3 totalRotAcceleration = glm::vec3(0);
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::U)) {
-            if (not isJumping && player.getPosition().y == 0.0) {
+            if (not isJumping && jumpTimer == 0.0f && player.getPosition().y == 0.0f) {
                 isJumping = true;
                 jumpTimer = 2.f;
+
+                if (backflip.getIndex() == -1)
+                    backflip.start();
             }
         }
-
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::O)) {
-            for (auto& anim : myScene.animators) {
-                anim.start();
+            if (edgeShading) {
+                fb.setProgram(fbs1);
             }
+            else {
+                fb.setProgram(fbs2);
+            }
+
+            edgeShading = not edgeShading;
         }
 
-        // if (player.getPosition().y > 0.0f)
-        {
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::I)) {
-                totalAcceleration += glm::vec3(0, 0, 5);
-            }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::K)) {
-                totalAcceleration += glm::vec3(0, 0, -5);
-            }
+        glm::vec3 facing = glm::vec3(player.getOrientation().x, 0.f, player.getOrientation().z);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::I)) {
+            totalAcceleration += glm::vec3(0, 0, 5);
+            facing.y += 0.f;
+        }
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::K)) {
+            totalAcceleration += glm::vec3(0, 0, -5);
+            facing.y += M_PI;
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J)) {
             totalAcceleration += glm::vec3(5, 0, 0);
             // totalRotAcceleration += glm::vec3(0, -2, 0);
+            facing.y += (-M_PI / 2);
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::L)) {
             totalAcceleration += glm::vec3(-5, 0, 0);
             // totalRotAcceleration += glm::vec3(0, 2, 0);
+            facing.y += (M_PI / 2);
         }
 
         glm::vec3 direction = glm::vec3(0);
@@ -353,18 +365,18 @@ int main() {
 
         if (jumpTimer > 0.0) {
             jumpTimer -= dt;
+            totalAcceleration += glm::vec3(0, 5, 0);
+
             if (jumpTimer <= 0.0) {
                 jumpTimer = 0.0;
                 isJumping = false;
             }
         }
 
-        if (isJumping) {
-            totalAcceleration += glm::vec3(0, 5, 0);
-        }
 
         player.setAcceleration(totalAcceleration);
         player.setRotAcceleration(totalRotAcceleration);
+        player.setOrientation(facing);
 
         myScene.camera.update((float)winSize.x, (float)winSize.y, dt);
 
@@ -375,14 +387,14 @@ int main() {
 
             // skip checking player and floor and wall
             if (&o == &player || &o == &floor || &o == &wall);
-            else if (CheckCollision(player, o)) {
+            else if (o.getDisplay() and CheckCollision(player, o)) {
                 // if (&o == &wall) {
                 //     player.setVelocity(-player.getVelocity());
                 // }
                 // else
                 {
-                    myScene.objects.erase(myScene.objects.begin() + i);
-                    player.grow(player.getScale() + glm::vec3(0.5));
+                    player.grow(player.getScale() + o.getScale() + glm::vec3(0.25));
+                    o.setDisplay(false);
                 }
             }
 
