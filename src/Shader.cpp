@@ -36,6 +36,17 @@ ShaderProgram FB_sharpenShader() {
     return shader;
 }
 
+ShaderProgram simpleDepthShader() {
+	ShaderProgram shader;
+	try {
+		shader.load("shaders/simple_depth.vert", "shaders/simple_depth.frag");
+	}
+	catch (std::runtime_error& e) {
+		std::cout << "ERROR: " << e.what() << std::endl;
+		exit(1);
+	}
+	return shader;
+}
 /**
  * @brief Constructs a shader program that applies the Phong reflection model.
  */

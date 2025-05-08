@@ -30,6 +30,9 @@ private:
 	// The object's base transformation matrix.
 	glm::mat4 m_baseTransform;
 
+    bool m_display;
+    bool m_gravityAffected;
+
 	// Some objects from Assimp imports have a "name" field, useful for debugging.
 	std::string m_name;
 
@@ -57,6 +60,7 @@ public:
     const glm::vec3& getRotAcceleration() const;
     const glm::vec3& getForward() const;
     const float getShininess() const;
+    const bool getDisplay() const;
 	/*const glm::vec4& getMaterial() const;*/
 
 	// Child management.
@@ -77,6 +81,7 @@ public:
     void setRotAcceleration(const glm::vec3& accel);
     void setForward(const glm::vec3& vec);
     void setShininess(const float value);
+    void setDisplay(const bool v);
 	/*void setMaterial(const glm::vec4& material);*/
 
 	// Transformations.
@@ -86,6 +91,7 @@ public:
 	void addChild(Object3D&& child);
 
     void updateForward();
+    void toggleGravity();
 
     // movement
     void tick(float_t dt);

@@ -22,7 +22,7 @@ class Framebuffer {
 
         ShaderProgram program;
 
-        Framebuffer(uint32_t& width, uint32_t& height, ShaderProgram p, bool enableCull = false, bool enableStencil = false) : program(p), winWidth(width), winHeight(height), cullEnabled(enableCull), stencilEnabled(enableStencil) {
+        Framebuffer(uint32_t& width, uint32_t& height, ShaderProgram p, bool enableCull = false, bool enableStencil = true) : program(p), winWidth(width), winHeight(height), cullEnabled(enableCull), stencilEnabled(enableStencil) {
             Resize();
         };
 
@@ -35,9 +35,14 @@ class Framebuffer {
         }
 
         void Resize() {
-            glDeleteRenderbuffers(1, &rboId);
-            glDeleteTextures(1, &textureId);
-            glDeleteFramebuffers(1, &fboId);
+            if (rboId)
+                glDeleteRenderbuffers(1, &rboId);
+
+            if (textureId)
+                glDeleteTextures(1, &textureId);
+
+            if (fboId)
+                glDeleteFramebuffers(1, &fboId);
 
             // sets up VAO and VBO that wil fit the whole screen.
             glGenVertexArrays(1, &screenVAO);
@@ -45,10 +50,10 @@ class Framebuffer {
             glBindVertexArray(screenVAO);
             glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(screenVertices), &screenVertices, GL_STATIC_DRAW);
-            glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(0);
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+            glEnableVertexAttribArray(1);
 
 
             // set up the framebuffer
@@ -64,8 +69,8 @@ class Framebuffer {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glBindTexture(GL_TEXTURE_2D, 0);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+            glBindTexture(GL_TEXTURE_2D, 0);
 
 
             // set up render buffer object
@@ -73,14 +78,15 @@ class Framebuffer {
             glBindRenderbuffer(GL_RENDERBUFFER, rboId);
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, winWidth, winHeight);
 
-            glBindRenderbuffer(GL_RENDERBUFFER, 0);
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboId);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
                 std::cout << "ERROR: Framebuffer incomplete!" << std::endl;
             }
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindVertexArray(0);
         }
 
         void Clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f, bool includeDepth = true) {
@@ -116,8 +122,8 @@ class Framebuffer {
 
         void RenderOnTexture() {
             // binds the framebuffer for drawing
-            glViewport(0, 0, winWidth, winHeight);
             glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+            glViewport(0, 0, winWidth, winHeight);
             // glViewport(0, 0, width, height);
 
             glEnable(GL_DEPTH_TEST);
@@ -127,7 +133,7 @@ class Framebuffer {
             if (cullEnabled)
                 glEnable(GL_CULL_FACE);
 
-            Clear();
+            Clear(0.45f, 0.45f, 0.45f, 1.0f);
         }
 
         void TextureToScreen() {
@@ -136,7 +142,11 @@ class Framebuffer {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glViewport(0, 0, winWidth, winHeight);
 
-            Clear(1.0f, 1.0f, 1.0f, 1.0f, false);
+            Clear(1.0f, 1.0f, 1.0f, 1.0f);
+
+            // draws texture to view
+            program.activate();
+            glBindVertexArray(screenVAO);
 
             glDisable(GL_DEPTH_TEST);
             if (stencilEnabled)
@@ -145,10 +155,7 @@ class Framebuffer {
             if (cullEnabled)
                 glDisable(GL_CULL_FACE);
 
-
-            // draws texture to view
-            program.activate();
-            glBindVertexArray(screenVAO);
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, textureId);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 

@@ -18,8 +18,8 @@ struct DirLight {
     glm::vec3 direction{ 1.0f, 1.0f, 0.0f };
 
     glm::vec3 ambient{ 0.2f, 0.2f, 0.2f };
-    glm::vec3 diffuse{ 0.4f, 0.4f, 0.4f };
-    glm::vec3 specular{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 diffuse{ 0.6f, 0.6f, 0.6f };
+    glm::vec3 specular{ 0.4f, 0.4f, 0.4f };
 };
 
 struct PointLight {
@@ -347,40 +347,48 @@ Scene Sanders() {
     Scene scene{ toonLightingShader() };
 
 	std::vector<Texture> textures = {
-		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
-		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
-		// loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
-		loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_baseColor.tga", "material.diffuse"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_specular.tga", "material.specular"),
+		loadTexture("models/White_marble_03/Textures_2K/white_marble_03_2k_normal.tga", "material.normal"),
+		// loadTexture("models/Tiles/Tiles_057_basecolor.png", "material.diffuse"),
 		// loadTexture("models/Tiles/Tiles_057_normal.png", "material.normal"),
 	};
 	auto mesh = Mesh3D::square(textures);
 	auto floor = Object3D(std::vector<Mesh3D>{mesh});
+	auto wall1 = Object3D(std::vector<Mesh3D>{mesh});
+
 	floor.grow(glm::vec3(100));
 	floor.move(glm::vec3(0, 0, 0));
 	floor.rotate(glm::vec3(-M_PI / 2, 0, 0));
 
+	wall1.grow(glm::vec3(100));
+	wall1.move(glm::vec3(100, 0, 0));
+	wall1.rotate(glm::vec3(M_PI, 0, M_PI));
+
 	scene.objects.push_back(std::move(floor));
+	scene.objects.push_back(std::move(wall1));
 
     auto brr = assimpLoad("models/brr/scene.gltf", true);
-    // auto trala = assimpLoad("models/trala/scene.gltf", true);
-    // auto thung = assimpLoad("models/thung/scene.gltf", true);
+    auto trala = assimpLoad("models/trala/scene.gltf", true);
+    auto thung = assimpLoad("models/thung/scene.gltf", true);
 
-    brr.move(glm::vec3(0));
+    brr.move(glm::vec3(0, 5, 0));
 
-    // trala.move(glm::vec3(10, -5, -10));
-    // trala.grow(glm::vec3(-0.5));
-    //
-    // thung.move(glm::vec3(-10, -5, -10));
-    // thung.grow(glm::vec3(-0.5));
+    trala.move(glm::vec3(5, 7.5f, -5));
+    trala.grow(glm::vec3(0.75));
+    trala.toggleGravity();
+
+    thung.move(glm::vec3(-10, 10, -10));
+    thung.grow(glm::vec3(0.75));
 
     scene.objects.push_back(std::move(brr));
-    // scene.objects.push_back(std::move(trala));
-    // scene.objects.push_back(std::move(thung));
+    scene.objects.push_back(std::move(trala));
+    scene.objects.push_back(std::move(thung));
 
-    printObjectHierarchy(scene.objects[1]);
+    // printObjectHierarchy(scene.objects[1]);
     // printObjectHierarchy(scene.objects[1]);
 
-    auto& obj = scene.objects[1];
+    auto& obj = scene.objects[2];
 
     // auto& first_1 = first.getChild(0);
     // auto& first_2 = first.getChild(0).getChild(0);
@@ -389,25 +397,12 @@ Scene Sanders() {
     // auto& first_2 = first.getChild(1);
     // auto& first_3 = first.getChild(2);
 
-	Animator animBrr;
+	Animator animThung;
 
-	animBrr.addAnimation(
+	animThung.addAnimation(
 	    [&obj] () {
-        return std::make_unique<BezierTranslationAnimation>(obj, 4,
-            obj.getPosition() + glm::vec3(0),
-            obj.getPosition() + glm::vec3(0, 3.f, 0),
-            obj.getPosition() + glm::vec3(1.5f, 3.f, 0),
-            obj.getPosition() + glm::vec3(3.f, 0, 0));
-	    }
-    );
-
-	animBrr.addAnimation(
-	    [&obj] () {
-        return std::make_unique<BezierTranslationAnimation>(obj, 4,
-            obj.getPosition() + glm::vec3(0),
-            obj.getPosition() + glm::vec3(0, 3.f, 0),
-            obj.getPosition() + glm::vec3(1.5f, 3.f, 0),
-            obj.getPosition() + glm::vec3(3.f, 0, 0));
+        return std::make_unique<TranslationAnimation>(obj, 4,
+            obj.getPosition() + glm::vec3(3.f, 2.f, 3.f));
 	    }
     );
 
@@ -418,62 +413,8 @@ Scene Sanders() {
 	//    );
 
 
-	scene.animators.push_back(std::move(animBrr));
+	scene.animators.push_back(std::move(animThung));
 
     return scene;
 }
 
-
-Scene Delight() {
-    Scene scene{ toonLightingShader() };
-
-    auto deli = assimpLoad("models/poppy/scene.gltf", true);
-    deli.move(glm::vec3(0.f, 0.f, 3.0f));
-    deli.rotate(glm::vec3(M_PI / 2, 0.f, 0.f));
-
-    scene.objects.push_back(std::move(deli));
-
-
-    // auto& deli_arm1 = scene.objects[0].getChild(0).getChild(0).getChild(0); // 3-children
-
-    auto& db1 = scene.objects[0].getChild(0).getChild(0).getChild(0).getChild(0).getChild(0); // 8 children
-
-    auto& db1_1 = db1.getChild(0); // ?
-    auto& db1_2 = db1.getChild(1); // clothes
-    auto& db1_3 = db1.getChild(2); // body
-    auto& db1_4 = db1.getChild(3); // hair
-    auto& db1_5 = db1.getChild(4); // eyes
-
-    // body
-    std::cout << "body children: " << db1_3.numberOfChildren() << std::endl;
-    auto& db2_1 = db1_3.getChild(0);
-
-	Animator animLady;
-
-	animLady.addAnimation(
-	    [&] () {
-        return std::make_unique<RotationAnimation>(db1_5, 5, glm::vec3(45.f, 0, 0));
-	    }
-    );
-	animLady.addAnimation(
-	    [&] () {
-        return std::make_unique<RotationAnimation>(db1_5, 5, glm::vec3(-45.f, 0, 0));
-	    }
-    );
-
-	animLady.addAnimation(
-	    [&] () {
-        return std::make_unique<RotationAnimation>(db1_5, 5, glm::vec3(0, 0, 45.f));
-	    }
-    );
-	animLady.addAnimation(
-	    [&] () {
-        return std::make_unique<RotationAnimation>(db1_5, 5, glm::vec3(0, 0, -45.f));
-	    }
-    );
-
-
-	scene.animators.push_back(std::move(animLady));
-
-    return scene;
-}

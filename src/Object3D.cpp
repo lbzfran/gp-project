@@ -20,7 +20,8 @@ Object3D::Object3D(std::vector<Mesh3D>&& meshes)
 
 Object3D::Object3D(std::vector<Mesh3D>&& meshes, const glm::mat4& baseTransform)
 	: m_meshes(meshes), m_position(), m_orientation(), m_scale(1.0),
-	m_forward(), m_center(), m_velocity(), m_acceleration(), m_rotVelocity(), m_rotAcceleration(), m_shininess(4), m_baseTransform(baseTransform)
+	m_center(), m_forward(), m_velocity(), m_acceleration(), m_rotVelocity(), m_rotAcceleration(), m_shininess(4), m_baseTransform(baseTransform),
+    m_display(true), m_gravityAffected(true)
 {
 }
 
@@ -164,6 +165,18 @@ inline float signOf(float x) {
     return (x > 0 ? 1 : (x < 0 ? -1 : 0));
 }
 
+const bool Object3D::getDisplay() const {
+    return m_display;
+}
+
+void Object3D::setDisplay(const bool v) {
+    m_display = v;
+}
+
+void Object3D::toggleGravity() {
+    m_gravityAffected = not m_gravityAffected;
+}
+
 void Object3D::updateForward() {
     float_t yaw = m_orientation.x;
 
@@ -176,24 +189,27 @@ void Object3D::updateForward() {
 
 void Object3D::tick(float_t dt) {
     const float_t friction = 1.25f;
-    const float_t weight = 5.0f;
+    const float_t weight = 4.0f;
     const float_t gravity = 9.81f;
     const float_t deceleration = 2.f; // natural deceleration of movement.
     const float_t rubber = 0.5f; // how much velocity is retained during collision
-    updateForward();
+    // updateForward();
 
-    m_position.x += m_forward.x * m_velocity.x * dt;
-    m_position.z += m_forward.z * m_velocity.z * dt;
-    m_position.y += m_velocity.y * dt;
+    // m_position.x += m_forward.x * m_velocity.x * dt;
+    // m_position.z += m_forward.z * m_velocity.z * dt;
+    // m_position.y += m_velocity.y * dt;
 
+    m_position += m_velocity * dt;
     m_velocity += m_acceleration * dt;
 
     m_orientation += m_rotVelocity * dt;
     m_rotVelocity += m_rotAcceleration * dt;
 
     // gravity when not accelerating upwards
-    if (m_position.y > 0.0 and m_acceleration.y <= 0.0) {
-        m_velocity.y += -(weight + gravity) * dt;
+    if (m_gravityAffected) {
+        if (m_position.y > 0.0 and m_acceleration.y <= 0.0) {
+            m_velocity.y += -(weight + gravity) * dt;
+        }
     }
 
     // collision with ground.
@@ -219,7 +235,8 @@ void Object3D::tick(float_t dt) {
 }
 
 void Object3D::render(ShaderProgram& shaderProgram) const {
-	renderRecursive(shaderProgram, glm::mat4(1));
+    if (m_display)
+        renderRecursive(shaderProgram, glm::mat4(1));
 }
 
 /**

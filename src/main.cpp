@@ -118,7 +118,6 @@ int main() {
     // the draw buffer.
     Framebuffer fb = Framebuffer(winSize.x, winSize.y, fbs, true);
 
-
 	// Ready, set, go!
 	bool running = true;
 	sf::Clock c;
@@ -137,6 +136,10 @@ int main() {
 
     bool moveHeld = false;
 
+    Object3D& floor = myScene.objects[0];
+    Object3D& wall = myScene.objects[1];
+    Object3D& player = myScene.objects[2];
+
     // center the mouse initially.
     sf::Vector2<int> centerPosition = {(int)winSize.x / 2, (int)winSize.y / 2};
     sf::Vector2<int> mousePosition = {};
@@ -145,7 +148,6 @@ int main() {
     bool lockCursor = true;
     window.setMouseCursorVisible(false);
     window.setMouseCursorGrabbed(true);
-    // window.setKeyRepeatEnabled(true);
 
 	while (running) {
 #ifdef SFML_V2
@@ -162,10 +164,8 @@ int main() {
                 centerPosition.y = static_cast<int>(winSize.y) / 2;
 
                 window.setSize({ winSize.x, winSize.y });
-                glViewport(0, 0, winSize.x, winSize.y);
 
                 fb.Resize();
-                /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
             }
@@ -195,10 +195,8 @@ int main() {
                 centerPosition.y = static_cast<int>(winSize.y) / 2;
 
                 window.setSize(winSize);
-                glViewport(0, 0, winSize.x, winSize.y);
 
                 fb.Resize();
-                /*fb = Framebuffer(winSize.x, winSize.y, fbs, true);*/
 
                 myScene.camera.RequestPerspective();
             }
@@ -234,7 +232,7 @@ int main() {
                     // for (auto& anim : myScene.animators) {
                     //     anim.start();
                     // }
-                    myScene.camera.SetTarget(&myScene.objects[1].getPosition());
+                    myScene.camera.SetTarget(&player.getPosition());
                 }
                 else {
                     myScene.camera.DropTarget();
@@ -248,6 +246,12 @@ int main() {
             running = false;
         }
 
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+            if (!targetLock) {
+                player.setPosition(myScene.camera.position);
+            }
+        }
         if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
             if (!lockCursor) {
                 lockCursor = !lockCursor;
@@ -265,21 +269,21 @@ int main() {
             }
         }
 
-        Object3D& player = myScene.objects[1];
-        CheckCollision(player, myScene.objects[0]);
-
         glm::vec3 totalAcceleration = glm::vec3(0);
         glm::vec3 totalRotAcceleration = glm::vec3(0);
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::U)) {
             if (not isJumping && player.getPosition().y == 0.0) {
                 isJumping = true;
-                jumpTimer = 1.25f;
+                jumpTimer = 2.f;
             }
         }
-        // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::O)) {
-        //     player.setAcceleration(glm::vec3(0, -5, 0));
-        // }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::O)) {
+            for (auto& anim : myScene.animators) {
+                anim.start();
+            }
+        }
 
         // if (player.getPosition().y > 0.0f)
         {
@@ -291,12 +295,12 @@ int main() {
             }
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J)) {
-            // totalAcceleration += glm::vec3(5, 0, 0);
-            totalRotAcceleration += glm::vec3(0, -5, 0);
+            totalAcceleration += glm::vec3(5, 0, 0);
+            // totalRotAcceleration += glm::vec3(0, -2, 0);
         }
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::L)) {
-            // totalAcceleration += glm::vec3(-5, 0, 0);
-            totalRotAcceleration += glm::vec3(0, 5, 0);
+            totalAcceleration += glm::vec3(-5, 0, 0);
+            // totalRotAcceleration += glm::vec3(0, 2, 0);
         }
 
         glm::vec3 direction = glm::vec3(0);
@@ -330,10 +334,15 @@ int main() {
 
         if (moveHeld) {
             myScene.camera.ProcessKeyboard(direction, dt);
+            moveHeld = false;
+            // keeps floor below player
+            // myScene.objects[0].setPosition(glm::vec3(player.getPosition().x, 0, player.getPosition().z));
         }
 
         // === UPDATE ===
 
+        // point light is attached to thung
+        myScene.plight.position = myScene.objects[3].getPosition() + glm::vec3(0, 0.5f, 0);
 
         if (targetLockCooldown > 0.0) {
             targetLockCooldown -= dt;
@@ -354,22 +363,30 @@ int main() {
             totalAcceleration += glm::vec3(0, 5, 0);
         }
 
-
         player.setAcceleration(totalAcceleration);
         player.setRotAcceleration(totalRotAcceleration);
 
         myScene.camera.update((float)winSize.x, (float)winSize.y, dt);
 
 		// Update the scene.
-        for (auto& o : myScene.objects) {
+        // for (auto& o : myScene.objects) {
+        for (int i = 0; i < myScene.objects.size(); i++) {
+            auto& o = myScene.objects[i];
+
+            // skip checking player and floor and wall
+            if (&o == &player || &o == &floor || &o == &wall);
+            else if (CheckCollision(player, o)) {
+                // if (&o == &wall) {
+                //     player.setVelocity(-player.getVelocity());
+                // }
+                // else
+                {
+                    myScene.objects.erase(myScene.objects.begin() + i);
+                    player.grow(player.getScale() + glm::vec3(0.5));
+                }
+            }
+
             o.tick(dt);
-            // if (o.getPosition().y < 0.f) {
-            //     o.setVelocity(-o.getVelocity());
-            //     o.setAcceleration(glm::vec3(o.getAcceleration().x, 5.f, o.getAcceleration().z));
-            // }
-            // else if (o.getPosition().y > 0.f) {
-            //     o.setAcceleration(glm::vec3(o.getAcceleration().x, -5.f, o.getAcceleration().z));
-            // }
         }
 
 		for (auto& anim : myScene.animators) {
