@@ -1,4 +1,4 @@
-# 🎮 GP Project – 3D Graphics Engine Mockup
+# 🎮 GraPhics Project – 3D Graphics Engine Mockup
 
 This project is a 3D graphics engine mockup developed as the final project for my Computer Graphics course. It demonstrates real-time rendering capabilities, including model loading, shading, and camera manipulation, using modern C++ and OpenGL libraries. It also features drawing on a framebuffer and several key optimizations such as caching, back-face culling.
 
